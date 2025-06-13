@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Instagram, X, MessageCircle } from 'lucide-react';
+import MiniPlayer from './MiniPlayer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,6 +32,13 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
               radio<span className="text-purple-400">nudista</span>
             </h1>
           </div>
+          
+          {/* Mini Player - Only show when not on home page */}
+          {currentPage !== 'home' && (
+            <div className="hidden md:block">
+              <MiniPlayer />
+            </div>
+          )}
           
           {/* Navigation Items */}
           <div className="hidden md:flex items-center space-x-8">
