@@ -24,7 +24,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/8009c35d-1fec-41f8-9456-bd9ec137bd10.png" 
+              src="/lovable-uploads/bf54acff-f37c-450a-991f-04d3bdf8f1bd.png" 
               alt="RadioNudista Logo" 
               className="h-8 w-auto"
             />
