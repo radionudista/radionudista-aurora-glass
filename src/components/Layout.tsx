@@ -22,9 +22,14 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
       <nav className="glass-navbar fixed top-0 left-0 right-0 z-50 px-4 py-4 md:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
-              Radio<span className="text-blue-300">Nudista</span>
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/lovable-uploads/4bb507d8-4411-411d-ba40-1018cb227ef4.png" 
+              alt="RadioNudista Logo" 
+              className="h-8 w-auto"
+            />
+            <h1 className="text-xl md:text-2xl font-bold text-white">
+              radio<span className="text-purple-400">nudista</span>
             </h1>
           </div>
           
