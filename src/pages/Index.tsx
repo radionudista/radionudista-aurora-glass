@@ -18,6 +18,7 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [backgroundVideo, setBackgroundVideo] = useState('');
   const [videoError, setVideoError] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(true);
 
   useEffect(() => {
     // Set random background video on page load
@@ -32,10 +33,14 @@ const Index = () => {
         console.log('Video file check:', response.status, response.ok);
         if (!response.ok) {
           console.error('Video file not found at:', randomVideo);
+          setVideoError(true);
+          setVideoLoading(false);
         }
       })
       .catch(error => {
         console.error('Error checking video file:', error);
+        setVideoError(true);
+        setVideoLoading(false);
       });
   }, []);
 
@@ -54,27 +59,45 @@ const Index = () => {
     console.log('Video error event:', event);
     console.log('Video failed to load:', backgroundVideo);
     setVideoError(true);
+    setVideoLoading(false);
   };
 
   const handleVideoLoad = () => {
     console.log('Video loaded successfully:', backgroundVideo);
     setVideoError(false);
+    setVideoLoading(false);
   };
 
   return (
     <AudioProvider>
       <div className="min-h-screen w-full overflow-hidden relative">
+        {/* Loading Background Image */}
+        {videoLoading && (
+          <div 
+            className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
+            style={{
+              backgroundImage: `url('https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')`
+            }}
+          />
+        )}
+        
         {/* Background Video */}
         {!videoError && backgroundVideo ? (
           <video 
-            className="fixed inset-0 w-full h-full object-cover"
+            className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-1000 ${videoLoading ? 'opacity-0' : 'opacity-100'}`}
             autoPlay
             muted
             loop
             playsInline
             onError={handleVideoError}
-            onLoadStart={() => console.log('Video loading started')}
-            onCanPlay={() => console.log('Video can play')}
+            onLoadStart={() => {
+              console.log('Video loading started');
+              setVideoLoading(true);
+            }}
+            onCanPlay={() => {
+              console.log('Video can play');
+              setVideoLoading(false);
+            }}
             onLoadedData={handleVideoLoad}
             onLoadedMetadata={() => console.log('Video metadata loaded')}
           >
@@ -83,7 +106,7 @@ const Index = () => {
         ) : null}
         
         {/* Fallback gradient background */}
-        <div className={`fixed inset-0 w-full h-full bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 ${!videoError && backgroundVideo ? 'opacity-0' : 'opacity-100'} transition-opacity duration-1000`} />
+        <div className={`fixed inset-0 w-full h-full bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 ${!videoError && backgroundVideo && !videoLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-1000`} />
         
         {/* Overlay for better contrast */}
         <div className="fixed inset-0 bg-black/40" />
