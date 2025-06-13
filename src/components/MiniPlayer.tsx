@@ -11,7 +11,7 @@ const MiniPlayer = () => {
       <button
         onClick={togglePlay}
         disabled={isLoading}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500/20 hover:bg-blue-500/30 transition-all"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/15 transition-all"
       >
         {isLoading ? (
           <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
@@ -23,8 +23,8 @@ const MiniPlayer = () => {
       </button>
       
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{currentTrack}</p>
-        <p className="text-gray-300 text-xs">RadioNudista</p>
+        <p className="text-white text-sm font-light truncate">{currentTrack}</p>
+        <p className="text-gray-400 text-xs font-light">RadioNudista</p>
       </div>
     </div>
   );
