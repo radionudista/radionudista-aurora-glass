@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Instagram, X, Discord } from 'lucide-react';
+import { Instagram, X, MessageCircle } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,7 +23,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/c3dab126-4651-4859-aaf5-c52de0155959.png" 
+              src="/lovable-uploads/4bb507d8-4411-411d-ba40-1018cb227ef4.png" 
               alt="RadioNudista Logo" 
               className="h-8 w-auto"
             />
@@ -69,7 +69,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
       <footer className="glass-footer fixed bottom-0 left-0 right-0 z-50 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-center space-x-8">
           <a href="#" className="social-icon">
-            <Discord className="w-6 h-6" />
+            <MessageCircle className="w-6 h-6" />
           </a>
           <a href="#" className="social-icon">
             <Instagram className="w-6 h-6" />
