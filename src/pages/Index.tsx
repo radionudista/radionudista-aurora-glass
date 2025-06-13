@@ -6,7 +6,7 @@ import AboutPage from '../components/AboutPage';
 import ContactPage from '../components/ContactPage';
 import { AudioProvider } from '../contexts/AudioContext';
 
-// You'll need to add video files to your project
+// You'll need to add video files to your project in the public folder
 const backgroundVideos = [
   '/videos/background1.mp4',
   '/videos/background2.mp4',
@@ -18,11 +18,13 @@ const backgroundVideos = [
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [backgroundVideo, setBackgroundVideo] = useState('');
+  const [videoError, setVideoError] = useState(false);
 
   useEffect(() => {
     // Set random background video on page load
     const randomVideo = backgroundVideos[Math.floor(Math.random() * backgroundVideos.length)];
     setBackgroundVideo(randomVideo);
+    console.log('Selected background video:', randomVideo);
   }, []);
 
   const renderPage = () => {
@@ -36,21 +38,32 @@ const Index = () => {
     }
   };
 
+  const handleVideoError = () => {
+    console.log('Video failed to load:', backgroundVideo);
+    setVideoError(true);
+  };
+
   return (
     <AudioProvider>
       <div className="min-h-screen w-full overflow-hidden relative">
         {/* Background Video */}
-        <video 
-          className="fixed inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          <source src={backgroundVideo} type="video/mp4" />
-          {/* Fallback for browsers that don't support video */}
-          <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900" />
-        </video>
+        {!videoError && backgroundVideo ? (
+          <video 
+            className="fixed inset-0 w-full h-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            onError={handleVideoError}
+            onLoadStart={() => console.log('Video loading started')}
+            onCanPlay={() => console.log('Video can play')}
+          >
+            <source src={backgroundVideo} type="video/mp4" />
+          </video>
+        ) : null}
+        
+        {/* Fallback gradient background */}
+        <div className={`fixed inset-0 w-full h-full bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 ${!videoError && backgroundVideo ? 'opacity-0' : 'opacity-100'} transition-opacity duration-1000`} />
         
         {/* Overlay for better contrast */}
         <div className="fixed inset-0 bg-black/40" />
