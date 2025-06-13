@@ -6,11 +6,16 @@ import AboutPage from '../components/AboutPage';
 import ContactPage from '../components/ContactPage';
 
 const backgroundImages = [
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920&h=1280&fit=crop',
-  'https://images.unsplash.com/photo-1500673922987-e212871fec22?w=1920&h=1280&fit=crop',
-  'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=1920&h=1280&fit=crop',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1920&h=1280&fit=crop',
-  'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?w=1920&h=1280&fit=crop'
+  '/lovable-uploads/1dcc5c3d-fb2a-4809-969e-295721e3be1e.png',
+  '/lovable-uploads/bdd6c6c8-ea8c-4919-a194-bd7505735eb8.png',
+  '/lovable-uploads/5e6c8844-321d-4ee4-bbe1-de1e0d2c6385.png',
+  '/lovable-uploads/b3a41135-c36d-42cc-9252-254a6ba3f398.png',
+  '/lovable-uploads/593c14bc-ad36-4608-b97d-0527d8376f3e.png',
+  '/lovable-uploads/f404ced0-df35-4c36-a07c-f1825211fde2.png',
+  '/lovable-uploads/1bbb4850-621c-4101-bc60-5b4a2f322633.png',
+  '/lovable-uploads/3c98a641-b62a-4246-bc5f-0e8aa8c0204d.png',
+  '/lovable-uploads/f60b5d6a-eae5-4e7f-a0b8-de3be2d1c7a7.png',
+  '/lovable-uploads/f9372b8d-dab4-4380-9ac2-059853b42009.png'
 ];
 
 const Index = () => {
