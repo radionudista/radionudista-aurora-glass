@@ -6,7 +6,7 @@ import AboutPage from '../components/AboutPage';
 import ContactPage from '../components/ContactPage';
 import { AudioProvider } from '../contexts/AudioContext';
 
-// You'll need to add video files to your project in the public folder
+// You'll need to add video files to your project in the public/videos folder
 const backgroundVideos = [
   '/videos/background1.mp4',
   '/videos/background2.mp4',
@@ -25,6 +25,19 @@ const Index = () => {
     const randomVideo = backgroundVideos[Math.floor(Math.random() * backgroundVideos.length)];
     setBackgroundVideo(randomVideo);
     console.log('Selected background video:', randomVideo);
+    console.log('Full video URL:', window.location.origin + randomVideo);
+    
+    // Test if video file exists
+    fetch(randomVideo, { method: 'HEAD' })
+      .then(response => {
+        console.log('Video file check:', response.status, response.ok);
+        if (!response.ok) {
+          console.error('Video file not found at:', randomVideo);
+        }
+      })
+      .catch(error => {
+        console.error('Error checking video file:', error);
+      });
   }, []);
 
   const renderPage = () => {
@@ -38,9 +51,15 @@ const Index = () => {
     }
   };
 
-  const handleVideoError = () => {
+  const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.log('Video error event:', event);
     console.log('Video failed to load:', backgroundVideo);
     setVideoError(true);
+  };
+
+  const handleVideoLoad = () => {
+    console.log('Video loaded successfully:', backgroundVideo);
+    setVideoError(false);
   };
 
   return (
@@ -57,6 +76,8 @@ const Index = () => {
             onError={handleVideoError}
             onLoadStart={() => console.log('Video loading started')}
             onCanPlay={() => console.log('Video can play')}
+            onLoadedData={handleVideoLoad}
+            onLoadedMetadata={() => console.log('Video metadata loaded')}
           >
             <source src={backgroundVideo} type="video/mp4" />
           </video>
