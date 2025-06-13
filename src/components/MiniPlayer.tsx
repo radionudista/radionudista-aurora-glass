@@ -24,7 +24,6 @@ const MiniPlayer = () => {
       
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-medium truncate">{currentTrack}</p>
-        <p className="text-gray-300 text-xs">RadioNudista</p>
       </div>
     </div>
   );
