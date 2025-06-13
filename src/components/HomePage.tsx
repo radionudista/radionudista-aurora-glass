@@ -1,7 +1,87 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+interface StreamStatus {
+  isMobile: boolean;
+  streamingStatus: number;
+  streamingType: string;
+  currentTrack: string;
+}
 
 const HomePage = () => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState('RadioNudista - Live Stream');
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const streamUrl = 'https://servidor30.brlogic.com:7024/live';
+  const statusUrl = 'https://d36nr0u3xmc4mm.cloudfront.net/index.php/api/streaming/status/7024/2348c62ead2082a25b4573ed601473a3/SV1BR';
+
+  // Fetch current track info
+  const fetchCurrentTrack = async () => {
+    try {
+      const response = await fetch(statusUrl);
+      const data: StreamStatus = await response.json();
+      if (data.currentTrack) {
+        setCurrentTrack(data.currentTrack);
+      }
+    } catch (error) {
+      console.error('Error fetching track info:', error);
+    }
+  };
+
+  // Toggle play/pause
+  const togglePlay = async () => {
+    if (!audioRef.current) return;
+
+    setIsLoading(true);
+    
+    try {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update track info periodically
+  useEffect(() => {
+    fetchCurrentTrack();
+    const interval = setInterval(fetchCurrentTrack, 10000); // Update every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle audio events
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleCanPlay = () => setIsLoading(false);
+    const handleWaiting = () => setIsLoading(true);
+    const handleError = () => {
+      setIsLoading(false);
+      setIsPlaying(false);
+      console.error('Audio playback error');
+    };
+
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('error', handleError);
+
+    return () => {
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('error', handleError);
+    };
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="glass-container max-w-4xl mx-auto">
@@ -21,18 +101,38 @@ const HomePage = () => {
             
             {/* Play Button */}
             <div className="flex justify-center mb-6">
-              <button className="play-button">
-                <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
+              <button 
+                className="play-button"
+                onClick={togglePlay}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : isPlaying ? (
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-6 bg-white"></div>
+                    <div className="w-1 h-6 bg-white"></div>
+                  </div>
+                ) : (
+                  <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
+                )}
               </button>
             </div>
             
             {/* Station Info */}
             <div className="space-y-2">
-              <p className="text-lg text-gray-200">RadioNudista - Live Stream</p>
-              <p className="text-sm text-gray-300">24/7 Music & Entertainment</p>
+              <p className="text-lg text-gray-200">{currentTrack}</p>
+              <p className="text-sm text-gray-300">RadioNudista - 24/7 Music & Entertainment</p>
             </div>
           </div>
         </div>
+        
+        {/* Hidden Audio Element */}
+        <audio
+          ref={audioRef}
+          src={streamUrl}
+          preload="none"
+        />
         
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-6">
