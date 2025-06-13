@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Instagram, X } from 'lucide-react';
 
 const ContactPage = () => {
   return (
