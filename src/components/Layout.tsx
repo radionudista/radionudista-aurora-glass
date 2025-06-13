@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Instagram } from 'lucide-react';
-import { X } from 'lucide-react';
+import { Instagram, X, Discord } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -70,9 +69,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
       <footer className="glass-footer fixed bottom-0 left-0 right-0 z-50 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-center space-x-8">
           <a href="#" className="social-icon">
-            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">D</span>
-            </div>
+            <Discord className="w-6 h-6" />
           </a>
           <a href="#" className="social-icon">
             <Instagram className="w-6 h-6" />
