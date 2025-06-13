@@ -1,86 +1,9 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-
-interface StreamStatus {
-  isMobile: boolean;
-  streamingStatus: number;
-  streamingType: string;
-  currentTrack: string;
-}
+import React from 'react';
+import { useAudio } from '../contexts/AudioContext';
 
 const HomePage = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState('RadioNudista - Live Stream');
-  const [isLoading, setIsLoading] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  const streamUrl = 'https://servidor30.brlogic.com:7024/live';
-  const statusUrl = 'https://d36nr0u3xmc4mm.cloudfront.net/index.php/api/streaming/status/7024/2348c62ead2082a25b4573ed601473a3/SV1BR';
-
-  // Fetch current track info
-  const fetchCurrentTrack = async () => {
-    try {
-      const response = await fetch(statusUrl);
-      const data: StreamStatus = await response.json();
-      if (data.currentTrack) {
-        setCurrentTrack(data.currentTrack);
-      }
-    } catch (error) {
-      console.error('Error fetching track info:', error);
-    }
-  };
-
-  // Toggle play/pause
-  const togglePlay = async () => {
-    if (!audioRef.current) return;
-
-    setIsLoading(true);
-    
-    try {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        await audioRef.current.play();
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Update track info periodically
-  useEffect(() => {
-    fetchCurrentTrack();
-    const interval = setInterval(fetchCurrentTrack, 10000); // Update every 10 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  // Handle audio events
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleCanPlay = () => setIsLoading(false);
-    const handleWaiting = () => setIsLoading(true);
-    const handleError = () => {
-      setIsLoading(false);
-      setIsPlaying(false);
-      console.error('Audio playback error');
-    };
-
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('waiting', handleWaiting);
-    audio.addEventListener('error', handleError);
-
-    return () => {
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('waiting', handleWaiting);
-      audio.removeEventListener('error', handleError);
-    };
-  }, []);
+  const { isPlaying, isLoading, currentTrack, togglePlay } = useAudio();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -126,13 +49,6 @@ const HomePage = () => {
             </div>
           </div>
         </div>
-        
-        {/* Hidden Audio Element */}
-        <audio
-          ref={audioRef}
-          src={streamUrl}
-          preload="none"
-        />
         
         {/* Features */}
         <div className="grid md:grid-cols-3 gap-6">

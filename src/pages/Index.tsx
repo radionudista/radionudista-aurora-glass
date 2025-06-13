@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import HomePage from '../components/HomePage';
 import AboutPage from '../components/AboutPage';
 import ContactPage from '../components/ContactPage';
+import { AudioProvider } from '../contexts/AudioContext';
 
 const backgroundImages = [
   '/lovable-uploads/1dcc5c3d-fb2a-4809-969e-295721e3be1e.png',
@@ -40,23 +41,25 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-hidden relative">
-      {/* Background Image */}
-      <div 
-        className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-      />
-      
-      {/* Overlay for better contrast */}
-      <div className="fixed inset-0 bg-black/30" />
-      
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        <Layout currentPage={currentPage} setCurrentPage={setCurrentPage}>
-          {renderPage()}
-        </Layout>
+    <AudioProvider>
+      <div className="min-h-screen w-full overflow-hidden relative">
+        {/* Background Image */}
+        <div 
+          className="fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+        
+        {/* Overlay for better contrast */}
+        <div className="fixed inset-0 bg-black/30" />
+        
+        {/* Main Content */}
+        <div className="relative z-10 min-h-screen flex flex-col">
+          <Layout currentPage={currentPage} setCurrentPage={setCurrentPage}>
+            {renderPage()}
+          </Layout>
+        </div>
       </div>
-    </div>
+    </AudioProvider>
   );
 };
 
