@@ -17,8 +17,8 @@ const HomePage = () => {
           <div className="text-center">
             <h3 className="text-2xl font-bold text-white mb-6">{currentTrack}</h3>
             
-            {/* Play Button */}
-            <div className="flex justify-center mb-6">
+            {/* Play Button and Audio Visualization */}
+            <div className="flex justify-center items-center mb-6 space-x-6">
               <button 
                 className="w-20 h-20 flex items-center justify-center hover:opacity-70 transition-opacity"
                 onClick={togglePlay}
@@ -35,6 +35,23 @@ const HomePage = () => {
                   <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
                 )}
               </button>
+              
+              {/* FFT Audio Visualization */}
+              {isPlaying && !isLoading && (
+                <div className="flex items-end space-x-1 h-12">
+                  {[...Array(8)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-white rounded-t-sm animate-pulse"
+                      style={{
+                        height: `${20 + Math.random() * 28}px`,
+                        animationDelay: `${i * 0.1}s`,
+                        animationDuration: `${0.6 + Math.random() * 0.4}s`
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Station Info */}
