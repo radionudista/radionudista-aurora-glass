@@ -36,37 +36,40 @@ const HomePage = () => {
             
             {/* Play Button and Audio Visualization */}
             <div className="flex justify-center items-center mb-6 space-x-6">
-              {!isPlaying ? (
-                <button 
-                  className="w-20 h-20 flex items-center justify-center hover:opacity-70 transition-opacity"
-                  onClick={togglePlay}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
-                  )}
-                </button>
-              ) : null}
-              
-              {/* Dynamic FFT Audio Visualization - Clickable for pause */}
-              {isPlaying && !isLoading && (
-                <button 
-                  onClick={togglePlay}
-                  className="flex items-end space-x-1 h-12 hover:opacity-70 transition-opacity cursor-pointer"
-                >
-                  {barHeights.map((height, i) => (
-                    <div
-                      key={i}
-                      className="w-1 bg-white rounded-t-sm transition-all duration-150 ease-out"
-                      style={{
-                        height: `${height}px`
-                      }}
-                    />
-                  ))}
-                </button>
-              )}
+              {/* Container with fixed height to prevent layout shift */}
+              <div className="h-20 flex items-center justify-center">
+                {!isPlaying ? (
+                  <button 
+                    className="w-20 h-20 flex items-center justify-center hover:opacity-70 transition-opacity"
+                    onClick={togglePlay}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
+                    )}
+                  </button>
+                ) : null}
+                
+                {/* Dynamic FFT Audio Visualization - Clickable for pause */}
+                {isPlaying && !isLoading && (
+                  <button 
+                    onClick={togglePlay}
+                    className="flex items-end space-x-1 h-12 hover:opacity-70 transition-opacity cursor-pointer"
+                  >
+                    {barHeights.map((height, i) => (
+                      <div
+                        key={i}
+                        className="w-1 bg-white rounded-t-sm transition-all duration-150 ease-out"
+                        style={{
+                          height: `${height}px`
+                        }}
+                      />
+                    ))}
+                  </button>
+                )}
+              </div>
             </div>
             
             {/* Station Info */}
