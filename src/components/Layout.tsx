@@ -60,8 +60,16 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
             ))}
           </div>
           
-          {/* Mobile Hamburger Menu */}
-          <div className="md:hidden">
+          {/* Mobile Navigation */}
+          <div className="md:hidden flex items-center space-x-3">
+            {/* Mini Player Mobile - Only show when not on home page */}
+            {currentPage !== 'home' && (
+              <div className="scale-75 origin-center">
+                <MiniPlayer />
+              </div>
+            )}
+            
+            {/* Mobile Hamburger Menu */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="nav-link p-2"
