@@ -1,5 +1,4 @@
 
-```tsx
 import React, { useState, useEffect } from 'react';
 import { useAudio } from '../contexts/AudioContext';
 
@@ -86,4 +85,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-```

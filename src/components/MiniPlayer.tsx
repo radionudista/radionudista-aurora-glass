@@ -1,5 +1,4 @@
 
-```tsx
 import React from 'react';
 import { useAudio } from '../contexts/AudioContext';
 
@@ -34,4 +33,3 @@ const MiniPlayer = () => {
 };
 
 export default MiniPlayer;
-```
