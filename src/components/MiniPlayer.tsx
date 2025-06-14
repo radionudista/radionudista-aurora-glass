@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Play, Pause } from 'lucide-react';
 import { useAudio } from '../contexts/AudioContext';
 
 const MiniPlayer = () => {
@@ -11,14 +10,17 @@ const MiniPlayer = () => {
       <button
         onClick={togglePlay}
         disabled={isLoading}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500/20 hover:bg-blue-500/30 transition-all"
+        className="flex items-center justify-center w-6 h-6 hover:opacity-70 transition-opacity"
       >
         {isLoading ? (
           <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
         ) : isPlaying ? (
-          <Pause className="w-4 h-4 text-white" />
+          <div className="flex space-x-1">
+            <div className="w-0.5 h-4 bg-white"></div>
+            <div className="w-0.5 h-4 bg-white"></div>
+          </div>
         ) : (
-          <Play className="w-4 h-4 text-white ml-0.5" />
+          <div className="w-0 h-0 border-l-[12px] border-l-white border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent ml-1"></div>
         )}
       </button>
       

@@ -20,16 +20,16 @@ const HomePage = () => {
             {/* Play Button */}
             <div className="flex justify-center mb-6">
               <button 
-                className="play-button"
+                className="w-20 h-20 flex items-center justify-center hover:opacity-70 transition-opacity"
                 onClick={togglePlay}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 ) : isPlaying ? (
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-6 bg-white"></div>
-                    <div className="w-1 h-6 bg-white"></div>
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-12 bg-white"></div>
+                    <div className="w-2 h-12 bg-white"></div>
                   </div>
                 ) : (
                   <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
