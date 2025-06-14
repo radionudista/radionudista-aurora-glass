@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Instagram, X, MessageCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Instagram, X, MessageCircle, Menu } from 'lucide-react';
 import MiniPlayer from './MiniPlayer';
 
 interface LayoutProps {
@@ -10,11 +10,18 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const navItems = [
     { id: 'home', label: 'Home' },
     { id: 'about', label: 'About' },
     { id: 'contact', label: 'Contact' }
   ];
+
+  const handleMobileNavClick = (page: string) => {
+    setCurrentPage(page);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -40,7 +47,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
             </div>
           )}
           
-          {/* Navigation Items */}
+          {/* Desktop Navigation Items */}
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <button
@@ -53,20 +60,69 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
             ))}
           </div>
           
-          {/* Mobile Navigation */}
-          <div className="md:hidden flex items-center space-x-4">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setCurrentPage(item.id)}
-                className={`nav-link-mobile ${currentPage === item.id ? 'active' : ''}`}
-              >
-                {item.label}
-              </button>
-            ))}
+          {/* Mobile Hamburger Menu */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="nav-link p-2"
+              aria-label="Open menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Sliding Panel */}
+          <div className={`absolute top-0 right-0 h-full w-80 max-w-[80vw] bg-black/40 backdrop-blur-xl border-l border-white/10 transform transition-transform duration-300 ease-out ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}>
+            {/* Close Button */}
+            <div className="flex justify-end p-4">
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="nav-link p-2"
+                aria-label="Close menu"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Navigation Items */}
+            <div className="px-6 py-4 space-y-6">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleMobileNavClick(item.id)}
+                  className={`block w-full text-left py-3 px-4 rounded-lg text-lg font-medium transition-all duration-200 ${
+                    currentPage === item.id 
+                      ? 'text-blue-400 bg-blue-400/10' 
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            
+            {/* Mini Player in Mobile Menu - Only show when not on home page */}
+            {currentPage !== 'home' && (
+              <div className="px-6 py-4 mt-8">
+                <MiniPlayer />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* Content */}
       <main className="flex-1 pt-20 pb-20">
