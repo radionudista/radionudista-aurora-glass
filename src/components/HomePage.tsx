@@ -1,9 +1,26 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAudio } from '../contexts/AudioContext';
 
 const HomePage = () => {
   const { isPlaying, isLoading, currentTrack, togglePlay } = useAudio();
+  const [barHeights, setBarHeights] = useState<number[]>([]);
+
+  // Generate random heights for FFT bars
+  useEffect(() => {
+    if (isPlaying && !isLoading) {
+      const interval = setInterval(() => {
+        const newHeights = Array.from({ length: 8 }, () => 
+          Math.random() * 40 + 10 // Random height between 10px and 50px
+        );
+        setBarHeights(newHeights);
+      }, 150); // Update every 150ms for smooth animation
+
+      return () => clearInterval(interval);
+    } else {
+      setBarHeights([]);
+    }
+  }, [isPlaying, isLoading]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -36,17 +53,15 @@ const HomePage = () => {
                 )}
               </button>
               
-              {/* FFT Audio Visualization */}
+              {/* Dynamic FFT Audio Visualization */}
               {isPlaying && !isLoading && (
                 <div className="flex items-end space-x-1 h-12">
-                  {[...Array(8)].map((_, i) => (
+                  {barHeights.map((height, i) => (
                     <div
                       key={i}
-                      className="w-1 bg-white rounded-t-sm animate-pulse"
+                      className="w-1 bg-white rounded-t-sm transition-all duration-150 ease-out"
                       style={{
-                        height: `${20 + Math.random() * 28}px`,
-                        animationDelay: `${i * 0.1}s`,
-                        animationDuration: `${0.6 + Math.random() * 0.4}s`
+                        height: `${height}px`
                       }}
                     />
                   ))}
