@@ -26,7 +26,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navbar */}
-      <nav className="glass-navbar fixed top-0 left-0 right-0 z-50 px-4 py-4 md:px-8">
+      <nav className="glass-navbar fixed top-0 left-0 right-0 z-50 px-6 py-4 md:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-3">
@@ -48,7 +48,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
           )}
           
           {/* Desktop Navigation Items */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -95,7 +95,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
             isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}>
             {/* Close Button */}
-            <div className="flex justify-end p-4">
+            <div className="flex justify-end p-6">
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="nav-link p-2"
@@ -106,12 +106,12 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
             </div>
             
             {/* Navigation Items */}
-            <div className="px-6 py-4 space-y-6">
+            <div className="px-8 py-4 space-y-8">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => handleMobileNavClick(item.id)}
-                  className={`block w-full text-left py-3 px-4 rounded-lg text-lg font-medium transition-all duration-200 ${
+                  className={`block w-full text-left py-4 px-6 rounded-lg text-lg font-medium transition-all duration-200 ${
                     currentPage === item.id 
                       ? 'text-blue-400 bg-blue-400/10' 
                       : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -124,7 +124,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
             
             {/* Mini Player in Mobile Menu - Only show when not on home page */}
             {currentPage !== 'home' && (
-              <div className="px-6 py-4 mt-8">
+              <div className="px-8 py-4 mt-12">
                 <MiniPlayer />
               </div>
             )}
@@ -138,7 +138,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
       </main>
       
       {/* Footer */}
-      <footer className="glass-footer fixed bottom-0 left-0 right-0 z-50 px-4 py-4">
+      <footer className="glass-footer fixed bottom-0 left-0 right-0 z-50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-center space-x-8">
           <a href="#" className="social-icon">
             <MessageCircle className="w-6 h-6" />

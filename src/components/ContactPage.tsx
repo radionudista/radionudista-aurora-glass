@@ -4,10 +4,10 @@ import { Instagram, X } from 'lucide-react';
 
 const ContactPage = () => {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-6 py-12">
       <div className="glass-container max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
             Get In <span className="text-blue-300">Touch</span>
           </h2>
           <p className="text-xl text-gray-200">
@@ -18,8 +18,8 @@ const ContactPage = () => {
         <div className="grid md:grid-cols-2 gap-8">
           {/* Contact Form */}
           <div className="glass-card">
-            <h3 className="text-2xl font-bold text-white mb-6">Send us a Message</h3>
-            <form className="space-y-4">
+            <h3 className="text-2xl font-bold text-white mb-8">Send us a Message</h3>
+            <form className="space-y-6">
               <div>
                 <label className="block text-gray-200 mb-2">Name</label>
                 <input 
@@ -58,10 +58,10 @@ const ContactPage = () => {
           </div>
           
           {/* Contact Info */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="glass-card">
-              <h3 className="text-2xl font-bold text-white mb-4">Contact Information</h3>
-              <div className="space-y-4">
+              <h3 className="text-2xl font-bold text-white mb-6">Contact Information</h3>
+              <div className="space-y-6">
                 <div>
                   <h4 className="text-lg font-semibold text-blue-300">Email</h4>
                   <p className="text-gray-200">contact@radionudista.com</p>
@@ -81,7 +81,7 @@ const ContactPage = () => {
             </div>
             
             <div className="glass-card">
-              <h3 className="text-xl font-bold text-white mb-4">Follow Us</h3>
+              <h3 className="text-xl font-bold text-white mb-6">Follow Us</h3>
               <div className="flex space-x-4">
                 <a href="#" className="social-icon-large">
                   <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">

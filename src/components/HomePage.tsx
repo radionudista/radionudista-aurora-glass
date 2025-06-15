@@ -23,22 +23,22 @@ const HomePage = () => {
   }, [isPlaying, isLoading]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className=" max-w-4xl mx-auto">
-        <div className="text-center mb-12">
+    <div className="container mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-16">
           
         </div>
         
         {/* Radio Player Section */}
         <div 
-          className={`glass-card mb-8 transition-colors ${!isLoading ? 'cursor-pointer hover:bg-white/10' : 'cursor-wait'}`}
+          className={`glass-card mb-12 transition-colors ${!isLoading ? 'cursor-pointer hover:bg-white/10' : 'cursor-wait'}`}
           onClick={!isLoading ? togglePlay : undefined}
         >
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-white mb-6">{currentTrack}</h3>
+            <h3 className="text-2xl font-bold text-white mb-8">{currentTrack}</h3>
             
             {/* Play Button and Audio Visualization */}
-            <div className="flex justify-center items-center mb-6 space-x-6">
+            <div className="flex justify-center items-center mb-8 space-x-8">
               {/* Container with fixed height to prevent layout shift */}
               <div className="h-20 flex items-center justify-center">
                 {!isPlaying ? (
