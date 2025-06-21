@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useVideo } from '../contexts/VideoContext';
 
 interface CountdownTeaserProps {
   targetDate: Date;
@@ -7,6 +8,7 @@ interface CountdownTeaserProps {
 }
 
 const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) => {
+  const { currentVideo } = useVideo();
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -47,7 +49,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
         loop
         playsInline
       >
-        <source src="/videos/background5.mp4" type="video/mp4" />
+        <source src={currentVideo} type="video/mp4" />
       </video>
       
       {/* Overlay for better contrast */}

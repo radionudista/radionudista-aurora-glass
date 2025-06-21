@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useVideo } from '../contexts/VideoContext';
 import PasswordProtection from '../components/PasswordProtection';
 import Layout from '../components/Layout';
 import HomePage from '../components/HomePage';
@@ -8,6 +9,7 @@ import ContactPage from '../components/ContactPage';
 import { AudioProvider } from '../contexts/AudioContext';
 
 const DemoSite = () => {
+  const { currentVideo } = useVideo();
   const [currentPage, setCurrentPage] = useState('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -37,7 +39,7 @@ const DemoSite = () => {
           loop
           playsInline
         >
-          <source src="/videos/background5.mp4" type="video/mp4" />
+          <source src={currentVideo} type="video/mp4" />
         </video>
         
         {/* Fallback gradient background */}

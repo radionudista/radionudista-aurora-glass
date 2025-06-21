@@ -1,7 +1,10 @@
 
 import React from 'react';
+import { useVideo } from '../contexts/VideoContext';
 
 const TwitchPlayer = () => {
+  const { currentVideo } = useVideo();
+
   return (
     <div className="min-h-screen w-full overflow-hidden relative">
       {/* Background Video */}
@@ -12,7 +15,7 @@ const TwitchPlayer = () => {
         loop
         playsInline
       >
-        <source src="/videos/background5.mp4" type="video/mp4" />
+        <source src={currentVideo} type="video/mp4" />
       </video>
       
       {/* Overlay for better contrast */}
