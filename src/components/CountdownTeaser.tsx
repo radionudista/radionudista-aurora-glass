@@ -67,11 +67,6 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
           </h1>
         </div>
 
-        {/* Coming Soon Text */}
-        <h2 className="text-2xl md:text-3xl font-semibold text-white mb-8 text-center">
-          Coming Soon
-        </h2>
-
         {/* Countdown Glass Container */}
         <div className="glass-card p-8 max-w-2xl w-full">
           <div className="grid grid-cols-4 gap-4 md:gap-8">
@@ -112,11 +107,6 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
             </div>
           </div>
         </div>
-
-        {/* Launch Message */}
-        <p className="text-lg md:text-xl text-gray-300 mt-8 text-center max-w-md">
-          Get ready for an amazing music experience
-        </p>
       </div>
     </div>
   );
