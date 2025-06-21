@@ -13,6 +13,8 @@ const DemoSite = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  console.log('DemoSite currentVideo:', currentVideo);
+
   const renderPage = () => {
     switch (currentPage) {
       case 'about':
@@ -38,6 +40,8 @@ const DemoSite = () => {
           muted
           loop
           playsInline
+          onError={(e) => console.error('Video load error:', e)}
+          onLoadStart={() => console.log('Video loading started:', currentVideo)}
         >
           <source src={currentVideo} type="video/mp4" />
         </video>
