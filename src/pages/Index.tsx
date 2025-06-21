@@ -6,8 +6,7 @@ import TwitchPlayer from '../components/TwitchPlayer';
 const Index = () => {
   const [showTwitch, setShowTwitch] = useState(false);
   
-  // Set your launch date here (example: January 1, 2025)
-  const launchDate = new Date('2024-12-31T23:59:59');
+  const launchDate = new Date('2025-06-21T08:10:00-05:00');
 
   const handleCountdownEnd = () => {
     setShowTwitch(true);
