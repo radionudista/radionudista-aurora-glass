@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import BackgroundVideo from './BackgroundVideo';
+import Logo from './Logo';
 
 interface PasswordProtectionProps {
   onCorrectPassword: () => void;
@@ -22,33 +24,12 @@ const PasswordProtection = ({ onCorrectPassword }: PasswordProtectionProps) => {
 
   return (
     <div className="min-h-screen w-full overflow-hidden relative">
-      {/* Background Video */}
-      <video 
-        className="fixed inset-0 w-full h-full object-cover"
-        autoPlay
-        muted
-        loop
-        playsInline
-      >
-        <source src="/videos/background5.mp4" type="video/mp4" />
-      </video>
-      
-      {/* Overlay for better contrast */}
-      <div className="fixed inset-0 bg-black/50" />
+      <BackgroundVideo overlayOpacity={0.5} />
       
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
         {/* Logo */}
-        <div className="flex items-center space-x-3 mb-12">
-          <img 
-            src="/lovable-uploads/ba6f20be-002c-47a0-ab7b-2e545a599205.png" 
-            alt="RadioNudista Logo" 
-            className="h-12 w-auto"
-          />
-          <h1 className="text-4xl md:text-5xl font-bold text-white">
-            radio<span className="text-purple-400">nudista</span>
-          </h1>
-        </div>
+        <Logo size="large" className="mb-12" />
 
         {/* Password Form */}
         <div className="glass-card p-8 max-w-md w-full">

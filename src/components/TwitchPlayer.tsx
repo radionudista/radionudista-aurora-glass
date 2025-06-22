@@ -1,39 +1,17 @@
 
 import React from 'react';
-import { useVideo } from '../contexts/VideoContext';
+import BackgroundVideo from './BackgroundVideo';
+import Logo from './Logo';
 
 const TwitchPlayer = () => {
-  const { currentVideo } = useVideo();
-
   return (
     <div className="min-h-screen w-full overflow-hidden relative">
-      {/* Background Video */}
-      <video 
-        className="fixed inset-0 w-full h-full object-cover"
-        autoPlay
-        muted
-        loop
-        playsInline
-      >
-        <source src={currentVideo} type="video/mp4" />
-      </video>
-      
-      {/* Overlay for better contrast */}
-      <div className="fixed inset-0 bg-black/60" />
+      <BackgroundVideo overlayOpacity={0.6} />
       
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
         {/* Logo */}
-        <div className="flex items-center space-x-3 mb-8">
-          <img 
-            src="/lovable-uploads/ba6f20be-002c-47a0-ab7b-2e545a599205.png" 
-            alt="RadioNudista Logo" 
-            className="h-8 w-auto"
-          />
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
-            radio<span className="text-purple-400">nudista</span>
-          </h1>
-        </div>
+        <Logo size="medium" className="mb-8" />
 
         {/* Twitch Player Container */}
         <div className="glass-card p-4 w-full max-w-5xl">
