@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Instagram, X, MessageCircle, Menu } from 'lucide-react';
 import MiniPlayer from './MiniPlayer';
+import Logo from './Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -29,16 +30,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
       <nav className="glass-navbar fixed top-0 left-0 right-0 z-50 px-6 py-4 md:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <img 
-              src="/lovable-uploads/ba6f20be-002c-47a0-ab7b-2e545a599205.png" 
-              alt="RadioNudista Logo" 
-              className="h-8 w-auto"
-            />
-            <h1 className="text-xl md:text-2xl font-bold text-white">
-              radio<span className="text-purple-400">nudista</span>
-            </h1>
-          </div>
+          <Logo size="medium" />
           
           {/* Mini Player - Only show when not on home page */}
           {currentPage !== 'home' && (
