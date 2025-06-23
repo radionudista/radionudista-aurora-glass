@@ -56,7 +56,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
                 {timeLeft.days.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Days
+                Dias
               </div>
             </div>
             
@@ -65,7 +65,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
                 {timeLeft.hours.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Hours
+                Horas
               </div>
             </div>
             
@@ -74,7 +74,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
                 {timeLeft.minutes.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Minutes
+                Minutos
               </div>
             </div>
             
@@ -83,7 +83,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
                 {timeLeft.seconds.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Seconds
+                Segundos
               </div>
             </div>
           </div>

@@ -40,8 +40,8 @@ const Logo = ({ size = 'medium', className = '' }: LogoProps) => {
         alt="RadioNudista Logo" 
         className={sizeClasses.image}
       />
-      <h1 className={`${sizeClasses.text} font-bold text-white`}>
-        radio<span className="text-purple-400">nudista</span>
+      <h1 className={`${sizeClasses.text} text-white `} >
+        <span style={{ all: 'unset' }} className="font-thin">radio</span><span className="font-bold">nudista</span>
       </h1>
     </div>
   );
