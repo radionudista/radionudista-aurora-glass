@@ -10,22 +10,22 @@ const Logo = ({ size = 'medium', className = '' }: LogoProps) => {
     switch (size) {
       case 'small':
         return {
-          image: 'h-6 w-auto',
+          image: 'h-7 w-auto',
           text: 'text-lg md:text-xl'
         };
       case 'medium':
         return {
-          image: 'h-8 w-auto',
+          image: 'h-9 w-auto',
           text: 'text-xl md:text-2xl'
         };
       case 'large':
         return {
-          image: 'h-12 w-auto',
+          image: 'h-14 w-auto',
           text: 'text-4xl md:text-6xl'
         };
       default:
         return {
-          image: 'h-8 w-auto',
+          image: 'h-9 w-auto',
           text: 'text-xl md:text-2xl'
         };
     }
@@ -40,8 +40,28 @@ const Logo = ({ size = 'medium', className = '' }: LogoProps) => {
         alt="RadioNudista Logo" 
         className={sizeClasses.image}
       />
-      <h1 className={`${sizeClasses.text} text-white `} >
-        <span style={{ all: 'unset' }} className="font-thin">radio</span><span className="font-bold">nudista</span>
+      <h1 
+        className={`${sizeClasses.text} text-white`} 
+        style={{ 
+          fontFamily: 'AkzidenzGrotesk, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          display: 'flex',
+          alignItems: 'baseline',
+          lineHeight: '1',
+          margin: 0,
+          padding: 0
+        }}
+      >
+        <span style={{ 
+          fontWeight: 300, 
+          lineHeight: 'inherit',
+          verticalAlign: 'baseline',
+          fontSize: 'inherit'
+        }}>radio</span><span style={{ 
+          fontWeight: 900, 
+          lineHeight: 'inherit',
+          verticalAlign: 'baseline',
+          fontSize: 'inherit'
+        }}>nudista</span>
       </h1>
     </div>
   );

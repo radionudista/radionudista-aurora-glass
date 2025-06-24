@@ -1,5 +1,5 @@
-import React from 'react';
-import { useVideo } from '../contexts/VideoContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { selectRandomVideo, VIDEO_CONFIG } from '../utils/videoConfig';
 
 interface BackgroundVideoProps {
   /**
@@ -39,22 +39,52 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   showOverlay = true,
   overlayOpacity = 0.4
 }) => {
-  const { currentVideo } = useVideo();
+  const [currentVideo, setCurrentVideo] = useState<string>(VIDEO_CONFIG.defaultVideo);
+  const [videoKey, setVideoKey] = useState<number>(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Debug: Log the current video path
-  console.log('BackgroundVideo - Current video:', currentVideo);
+  useEffect(() => {
+    // Select a random video each time the component mounts
+    const randomVideo = selectRandomVideo();
+    setCurrentVideo(randomVideo);
+    // Force video reload by changing the key
+    setVideoKey(prev => prev + 1);
+    
+    // Debug: Log the selected video for development
+    console.log('BackgroundVideo - Random video selected:', randomVideo);
+  }, []); // Empty dependency array ensures this runs once when component mounts
+
+  useEffect(() => {
+    // Force video to load when currentVideo changes
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [currentVideo]);
+
+  const handleVideoLoadedData = () => {
+    // Ensure video starts playing after loading new source
+    if (videoRef.current) {
+      videoRef.current.play().catch(error => {
+        console.log('Video autoplay prevented:', error);
+      });
+    }
+  };
 
   return (
     <>
       {/* Background Video */}
       <video 
+        ref={videoRef}
+        key={videoKey}
         className={`fixed inset-0 w-full h-full object-cover z-0 ${className}`}
         autoPlay
         muted
         loop
         playsInline
+        preload="auto"
+        onLoadedData={handleVideoLoadedData}
       >
-        <source src={currentVideo} type="video/mp4" />
+        <source src={`${currentVideo}?t=${videoKey}`} type="video/mp4" />
       </video>
       
       {/* Fallback gradient background */}
