@@ -56,7 +56,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
                 {timeLeft.days.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Dias
+                Días
               </div>
             </div>
             
