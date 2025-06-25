@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { selectRandomVideo, VIDEO_CONFIG } from '../utils/videoConfig';
+import { LAYOUT, getGlassOverlay } from '../constants/layoutConstants';
 
 interface BackgroundVideoProps {
   /**
@@ -32,6 +33,9 @@ interface BackgroundVideoProps {
  * Follows Open/Closed Principle:
  * - Open for extension through props
  * - Closed for modification of core functionality
+ * 
+ * Follows DRY Principle:
+ * - Uses centralized layout constants
  */
 const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   className = '',
@@ -70,13 +74,15 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
     }
   };
 
+  const overlayConfig = getGlassOverlay(overlayOpacity);
+
   return (
     <>
       {/* Background Video */}
       <video 
         ref={videoRef}
         key={videoKey}
-        className={`fixed inset-0 w-full h-full object-cover z-0 ${className}`}
+        className={`${LAYOUT.PATTERNS.FIXED_OVERLAY} object-cover z-${LAYOUT.Z_INDEX.BACKGROUND} ${className}`}
         autoPlay
         muted
         loop
@@ -89,19 +95,19 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
       
       {/* Fallback gradient background */}
       {showFallbackGradient && (
-        <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 z-[-1]" />
+        <div className={`${LAYOUT.PATTERNS.FIXED_OVERLAY} bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 z-[-1]`} />
       )}
       
       {/* Overlay for better contrast */}
       {showOverlay && (
         <div 
-          className="fixed inset-0 z-[1]" 
-          style={{ backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})` }}
+          className={`${overlayConfig.className} z-[${LAYOUT.Z_INDEX.OVERLAY}]`}
+          style={overlayConfig.style}
         />
       )}
       
       {/* Video Credits */}
-      <div className="fixed bottom-20 right-4 z-[60] text-white/60 text-xs font-light backdrop-blur-sm bg-black/20 px-2 py-1 rounded-sm transition-all duration-300">
+      <div className={`fixed bottom-20 right-4 z-[${LAYOUT.Z_INDEX.CREDITS}] text-white/60 text-xs font-light backdrop-blur-sm bg-black/20 px-2 py-1 rounded-sm transition-all duration-300`}>
         Visuals by{' '}
         <a 
           href="https://www.instagram.com/gachapon3000" 

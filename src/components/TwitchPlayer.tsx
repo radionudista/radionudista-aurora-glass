@@ -2,6 +2,7 @@
 import React from 'react';
 import BackgroundVideo from './BackgroundVideo';
 import Logo from './Logo';
+import { getAspectRatioPadding } from '../constants/mediaConstants';
 
 const TwitchPlayer = () => {
   return (
@@ -15,7 +16,10 @@ const TwitchPlayer = () => {
 
         {/* Twitch Player Container */}
         <div className="glass-card p-4 w-full max-w-5xl">
-          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <div 
+            className="relative w-full" 
+            style={getAspectRatioPadding('VIDEO_16_9')}
+          >
             <iframe
               src="https://player.twitch.tv/?channel=radionudista&parent=localhost&parent=lovableproject.com&autoplay=true&muted=false"
               className="absolute top-0 left-0 w-full h-full rounded-md"
