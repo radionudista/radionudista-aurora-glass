@@ -103,7 +103,7 @@ const Layout = ({ children, currentPage, setCurrentPage }: LayoutProps) => {
                 <button
                   key={item.id}
                   onClick={() => handleMobileNavClick(item.id)}
-                  className={`block w-full text-left py-4 px-6 rounded-lg text-lg font-medium transition-all duration-200 ${
+                  className={`block w-full text-left py-4 px-6 rounded-md text-lg font-medium transition-all duration-200 ${
                     currentPage === item.id 
                       ? 'text-blue-400 bg-blue-400/10' 
                       : 'text-white/80 hover:text-white hover:bg-white/10'

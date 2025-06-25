@@ -52,7 +52,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
         <div className="glass-card p-8 max-w-2xl w-full">
           <div className="grid grid-cols-4 gap-4 md:gap-8">
             <div className="text-center">
-              <div className="text-3xl md:text-5xl font-bold text-white mb-2">
+              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
                 {timeLeft.days.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
@@ -61,7 +61,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
             </div>
             
             <div className="text-center">
-              <div className="text-3xl md:text-5xl font-bold text-white mb-2">
+              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
                 {timeLeft.hours.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
@@ -70,7 +70,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
             </div>
             
             <div className="text-center">
-              <div className="text-3xl md:text-5xl font-bold text-white mb-2">
+              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
                 {timeLeft.minutes.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
@@ -79,7 +79,7 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
             </div>
             
             <div className="text-center">
-              <div className="text-3xl md:text-5xl font-bold text-white mb-2">
+              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
                 {timeLeft.seconds.toString().padStart(2, '0')}
               </div>
               <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">

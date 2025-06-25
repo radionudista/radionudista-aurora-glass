@@ -99,6 +99,19 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
           style={{ backgroundColor: `rgba(0, 0, 0, ${overlayOpacity})` }}
         />
       )}
+      
+      {/* Video Credits */}
+      <div className="fixed bottom-20 right-4 z-[60] text-white/60 text-xs font-light backdrop-blur-sm bg-black/20 px-2 py-1 rounded-sm transition-all duration-300">
+        Visuals by{' '}
+        <a 
+          href="https://www.instagram.com/gachapon3000" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 hover:underline transition-colors duration-200"
+        >
+          @Gachapon3000
+        </a>
+      </div>
     </>
   );
 };

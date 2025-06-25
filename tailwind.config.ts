@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
 	darkMode: ["class"],
@@ -64,9 +65,15 @@ export default {
 				}
 			},
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				'none': '0',
+				'sm': '1px',      // 2px * 0.48 = 0.96px ≈ 1px
+				'DEFAULT': '2px', // 4px * 0.48 = 1.92px ≈ 2px
+				'md': '3px',      // 6px * 0.48 = 2.88px ≈ 3px
+				'lg': '4px',      // 8px * 0.48 = 3.84px ≈ 4px
+				'xl': '6px',      // 12px * 0.48 = 5.76px ≈ 6px
+				'2xl': '8px',     // 16px * 0.48 = 7.68px ≈ 8px
+				'3xl': '12px',    // 24px * 0.48 = 11.52px ≈ 12px
+				'full': '9999px'
 			},
 			keyframes: {
 				'accordion-down': {
@@ -92,5 +99,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [tailwindcssAnimate],
 } satisfies Config;

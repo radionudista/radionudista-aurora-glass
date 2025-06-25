@@ -14,6 +14,7 @@ export const VIDEO_CONFIG = {
     '/videos/background1.mp4',
     '/videos/background2.mp4',
     '/videos/background3.mp4',
+    '/videos/background5.mp4',
     '/videos/background5.mp4'
   ],
   defaultVideo: '/videos/background5.mp4'

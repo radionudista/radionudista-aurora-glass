@@ -18,7 +18,7 @@ const TwitchPlayer = () => {
           <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
             <iframe
               src="https://player.twitch.tv/?channel=radionudista&parent=localhost&parent=lovableproject.com&autoplay=true&muted=false"
-              className="absolute top-0 left-0 w-full h-full rounded-lg"
+              className="absolute top-0 left-0 w-full h-full rounded-md"
               allowFullScreen
               title="RadioNudista Twitch Stream"
             />
