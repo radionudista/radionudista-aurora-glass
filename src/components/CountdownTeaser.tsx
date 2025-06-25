@@ -1,43 +1,34 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Logo from './Logo';
 import BackgroundVideo from './BackgroundVideo';
+import CountdownUnit from './ui/CountdownUnit';
+import { useCountdown } from '../hooks/useCountdown';
+import { TIME_CONSTANTS } from '../constants/timeConstants';
 
 interface CountdownTeaserProps {
   targetDate: Date;
   onCountdownEnd: () => void;
 }
 
-const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) => {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = targetDate.getTime() - new Date().getTime();
-      
-      if (difference > 0) {
-        setTimeLeft({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60)
-        });
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        onCountdownEnd();
-      }
-    };
-
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
-
-    return () => clearInterval(timer);
-  }, [targetDate, onCountdownEnd]);
+/**
+ * CountdownTeaser Component
+ * 
+ * Follows Single Responsibility Principle:
+ * - Only responsible for rendering the countdown teaser page
+ * 
+ * Follows DRY Principle:
+ * - Uses reusable CountdownUnit components
+ * - Delegates countdown logic to custom hook
+ * 
+ * Follows Dependency Inversion Principle:
+ * - Depends on abstractions (hooks) rather than concrete implementations
+ */
+const CountdownTeaser: React.FC<CountdownTeaserProps> = ({ 
+  targetDate, 
+  onCountdownEnd 
+}) => {
+  const { timeLeft } = useCountdown(targetDate, onCountdownEnd);
 
   return (
     <div className="min-h-screen w-full overflow-hidden relative">
@@ -51,41 +42,22 @@ const CountdownTeaser = ({ targetDate, onCountdownEnd }: CountdownTeaserProps) =
         {/* Countdown Glass Container */}
         <div className="glass-card p-8 max-w-2xl w-full">
           <div className="grid grid-cols-4 gap-4 md:gap-8">
-            <div className="text-center">
-              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
-                {timeLeft.days.toString().padStart(2, '0')}
-              </div>
-              <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Días
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
-                {timeLeft.hours.toString().padStart(2, '0')}
-              </div>
-              <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Horas
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
-                {timeLeft.minutes.toString().padStart(2, '0')}
-              </div>
-              <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Minutos
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="text-3xl md:text-5xl font-light text-white mb-2" style={{ fontFamily: 'AkzidenzGrotesk, sans-serif', fontWeight: 300 }}>
-                {timeLeft.seconds.toString().padStart(2, '0')}
-              </div>
-              <div className="text-sm md:text-base text-gray-300 uppercase tracking-wider">
-                Segundos
-              </div>
-            </div>
+            <CountdownUnit 
+              value={timeLeft.days} 
+              label={TIME_CONSTANTS.LABELS_ES.DAYS}
+            />
+            <CountdownUnit 
+              value={timeLeft.hours} 
+              label={TIME_CONSTANTS.LABELS_ES.HOURS}
+            />
+            <CountdownUnit 
+              value={timeLeft.minutes} 
+              label={TIME_CONSTANTS.LABELS_ES.MINUTES}
+            />
+            <CountdownUnit 
+              value={timeLeft.seconds} 
+              label={TIME_CONSTANTS.LABELS_ES.SECONDS}
+            />
           </div>
         </div>
       </div>

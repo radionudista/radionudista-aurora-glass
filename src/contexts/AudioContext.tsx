@@ -1,5 +1,7 @@
 
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import { MEDIA_CONSTANTS } from '../constants/mediaConstants';
+import { STREAM_CONFIG } from '../constants/contactInfo';
 
 interface StreamStatus {
   isMobile: boolean;
@@ -19,15 +21,15 @@ const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState('RadioNudista - Live Stream');
+  const [currentTrack, setCurrentTrack] = useState<string>(MEDIA_CONSTANTS.STREAM.DEFAULT_TRACK);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const streamUrl = 'https://servidor30.brlogic.com:7024/live';
-  const statusUrl = 'https://d36nr0u3xmc4mm.cloudfront.net/index.php/api/streaming/status/7024/2348c62ead2082a25b4573ed601473a3/SV1BR';
+  const streamUrl = STREAM_CONFIG.streamUrl;
+  const statusUrl = STREAM_CONFIG.statusUrl;
 
   // Fetch current track info
-  const fetchCurrentTrack = async () => {
+  const fetchCurrentTrack = useCallback(async () => {
     try {
       const response = await fetch(statusUrl);
       const data: StreamStatus = await response.json();
@@ -37,7 +39,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Error fetching track info:', error);
     }
-  };
+  }, [statusUrl]);
 
   // Toggle play/pause
   const togglePlay = async () => {
@@ -63,9 +65,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Update track info periodically
   useEffect(() => {
     fetchCurrentTrack();
-    const interval = setInterval(fetchCurrentTrack, 10000);
+    const interval = setInterval(fetchCurrentTrack, MEDIA_CONSTANTS.STREAM.UPDATE_INTERVAL);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchCurrentTrack]);
 
   // Handle audio events
   useEffect(() => {
@@ -102,7 +104,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       <audio
         ref={audioRef}
         src={streamUrl}
-        preload="none"
+        preload={MEDIA_CONSTANTS.STREAM.PRELOAD}
       />
     </AudioContext.Provider>
   );

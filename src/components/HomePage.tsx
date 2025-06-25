@@ -1,26 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useAudio } from '../contexts/AudioContext';
+import MediaButton from './ui/MediaButton';
+import AudioVisualization from './ui/AudioVisualization';
+import { useAudioVisualization } from '../hooks/useAudioVisualization';
+import { GlassWrapper } from '../utils/glassEffects';
 
 const HomePage = () => {
   const { isPlaying, isLoading, currentTrack, togglePlay } = useAudio();
-  const [barHeights, setBarHeights] = useState<number[]>([]);
-
-  // Generate random heights for FFT bars
-  useEffect(() => {
-    if (isPlaying && !isLoading) {
-      const interval = setInterval(() => {
-        const newHeights = Array.from({ length: 8 }, () => 
-          Math.random() * 40 + 10 // Random height between 10px and 50px
-        );
-        setBarHeights(newHeights);
-      }, 150); // Update every 150ms for smooth animation
-
-      return () => clearInterval(interval);
-    } else {
-      setBarHeights([]);
-    }
-  }, [isPlaying, isLoading]);
+  const { barHeights } = useAudioVisualization({ isPlaying, isLoading });
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -42,32 +30,17 @@ const HomePage = () => {
               {/* Container with fixed height to prevent layout shift */}
               <div className="h-20 flex items-center justify-center">
                 {!isPlaying ? (
-                  <div
-                    className="w-20 h-20 flex items-center justify-center"
-                  >
-                    {isLoading ? (
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <div className="w-0 h-0 border-l-[30px] border-l-white border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent ml-2"></div>
-                    )}
-                  </div>
+                  <MediaButton
+                    isPlaying={isPlaying}
+                    isLoading={isLoading}
+                    onClick={togglePlay}
+                    size="large"
+                  />
                 ) : null}
                 
                 {/* Dynamic FFT Audio Visualization - Clickable for pause */}
                 {isPlaying && !isLoading && (
-                  <div
-                    className="flex items-end space-x-1 h-12"
-                  >
-                    {barHeights.map((height, i) => (
-                      <div
-                        key={i}
-                        className="w-1 bg-white rounded-t-sm transition-all duration-150 ease-out"
-                        style={{
-                          height: `${height}px`
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <AudioVisualization barHeights={barHeights} />
                 )}
               </div>
             </div>

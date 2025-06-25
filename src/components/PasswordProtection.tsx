@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import BackgroundVideo from './BackgroundVideo';
 import Logo from './Logo';
+import { FormContainer, FormField, FormInput, FormButton } from './ui/FormComponents';
 
 interface PasswordProtectionProps {
   onCorrectPassword: () => void;
@@ -37,35 +38,25 @@ const PasswordProtection = ({ onCorrectPassword }: PasswordProtectionProps) => {
             Demo Site Access
           </h2>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Enter Password
-              </label>
-              <input
+          <FormContainer onSubmit={handleSubmit}>
+            <FormField 
+              label="Enter Password" 
+              error={error}
+              required
+            >
+              <FormInput
                 type="password"
-                id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="glass-input w-full"
                 placeholder="Password"
-                required
+                error={!!error}
               />
-            </div>
+            </FormField>
             
-            {error && (
-              <div className="text-red-400 text-sm text-center">
-                {error}
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              className="glass-button w-full"
-            >
+            <FormButton type="submit" fullWidth>
               Access Demo
-            </button>
-          </form>
+            </FormButton>
+          </FormContainer>
         </div>
       </div>
     </div>
