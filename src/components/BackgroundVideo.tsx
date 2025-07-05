@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { selectRandomVideo, VIDEO_CONFIG } from '../utils/videoConfig';
 import { LAYOUT, getGlassOverlay } from '../constants/layoutConstants';
+import { useBackgroundTransition } from '../hooks/useBackgroundTransition';
 
 interface BackgroundVideoProps {
   /**
@@ -28,14 +29,21 @@ interface BackgroundVideoProps {
  * BackgroundVideo Component
  * 
  * Follows Single Responsibility Principle:
- * - Only responsible for rendering background video
+ * - Only responsible for rendering background video with smooth image-to-video transition
  * 
  * Follows Open/Closed Principle:
  * - Open for extension through props
  * - Closed for modification of core functionality
  * 
  * Follows DRY Principle:
- * - Uses centralized layout constants
+ * - Uses centralized layout constants and background transition logic
+ * - Reuses background image utilities and transition hook
+ * 
+ * Features:
+ * - Shows random background image while video loads
+ * - Smooth transition from image to video
+ * - Fallback gradient background
+ * - Configurable overlay for better contrast
  */
 const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   className = '',
@@ -47,6 +55,22 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   const [videoKey, setVideoKey] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Use the background transition hook
+  const { 
+    currentImage, 
+    isVideoReady, 
+    showImage, 
+    showVideo, 
+    imageOpacity, 
+    videoOpacity,
+    handleVideoCanPlay,
+    handleVideoLoadedData,
+    transitionStyles
+  } = useBackgroundTransition({ 
+    videoRef,
+    // Using default values: 1s transition, 10s minimum time, elegant curve
+  });
+
   useEffect(() => {
     // Select a random video each time the component mounts
     const randomVideo = selectRandomVideo();
@@ -56,39 +80,50 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
     
     // Debug: Log the selected video for development
     console.log('BackgroundVideo - Random video selected:', randomVideo);
+    console.log('BackgroundVideo - Component initialized');
   }, []); // Empty dependency array ensures this runs once when component mounts
 
   useEffect(() => {
     // Force video to load when currentVideo changes
     if (videoRef.current) {
       videoRef.current.load();
+      console.log('BackgroundVideo - Video load() called for:', currentVideo);
     }
   }, [currentVideo]);
-
-  const handleVideoLoadedData = () => {
-    // Ensure video starts playing after loading new source
-    if (videoRef.current) {
-      videoRef.current.play().catch(error => {
-        console.log('Video autoplay prevented:', error);
-      });
-    }
-  };
 
   const overlayConfig = getGlassOverlay(overlayOpacity);
 
   return (
     <>
-      {/* Background Video */}
+      {/* Background Image (shown while video loads) */}
+      {showImage && currentImage && (
+        <div 
+          className={`${LAYOUT.PATTERNS.FIXED_OVERLAY} bg-cover bg-center bg-no-repeat z-[${LAYOUT.Z_INDEX.BACKGROUND}]`}
+          style={{
+            backgroundImage: `url(${currentImage.path})`,
+            ...transitionStyles.image
+          }}
+          role="img"
+          aria-label={currentImage.alt}
+        />
+      )}
+
+      {/* Background Video - Always rendered for smooth crossfade */}
       <video 
         ref={videoRef}
         key={videoKey}
-        className={`${LAYOUT.PATTERNS.FIXED_OVERLAY} object-cover z-${LAYOUT.Z_INDEX.BACKGROUND} ${className}`}
+        className={`${LAYOUT.PATTERNS.FIXED_OVERLAY} object-cover z-[${LAYOUT.Z_INDEX.BACKGROUND}] ${className}`}
+        style={transitionStyles.video}
         autoPlay
         muted
         loop
         playsInline
         preload="auto"
         onLoadedData={handleVideoLoadedData}
+        onCanPlay={handleVideoCanPlay}
+        onLoadStart={() => console.log('BackgroundVideo - Video started loading')}
+        onProgress={() => console.log('BackgroundVideo - Video loading progress')}
+        onCanPlayThrough={() => console.log('BackgroundVideo - Video can play through')}
       >
         <source src={`${currentVideo}?t=${videoKey}`} type="video/mp4" />
       </video>
@@ -104,6 +139,16 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
           className={`${overlayConfig.className} z-[${LAYOUT.Z_INDEX.OVERLAY}]`}
           style={overlayConfig.style}
         />
+      )}
+      
+      {/* Debug Info - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs space-y-1">
+          <div>Image: {showImage ? 'Visible' : 'Hidden'} (opacity: {imageOpacity})</div>
+          <div>Video: Ready={isVideoReady ? 'Yes' : 'No'} (opacity: {videoOpacity})</div>
+          <div>Current Image: {currentImage?.id || 'None'}</div>
+          <div>Current Video: {currentVideo.split('/').pop()}</div>
+        </div>
       )}
       
       {/* Video Credits */}
