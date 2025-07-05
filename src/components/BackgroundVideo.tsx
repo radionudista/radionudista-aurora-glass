@@ -34,11 +34,11 @@ interface BackgroundVideoProps {
  * Follows Open/Closed Principle:
  * - Open for extension through props
  * - Closed for modification of core functionality
- * 
+ *
  * Follows DRY Principle:
  * - Uses centralized layout constants and background transition logic
  * - Reuses background image utilities and transition hook
- * 
+ *
  * Features:
  * - Shows random background image while video loads
  * - Smooth transition from image to video
@@ -54,22 +54,6 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   const [currentVideo, setCurrentVideo] = useState<string>(VIDEO_CONFIG.defaultVideo);
   const [videoKey, setVideoKey] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Use the background transition hook
-  const { 
-    currentImage, 
-    isVideoReady, 
-    showImage, 
-    showVideo, 
-    imageOpacity, 
-    videoOpacity,
-    handleVideoCanPlay,
-    handleVideoLoadedData,
-    transitionStyles
-  } = useBackgroundTransition({ 
-    videoRef,
-    // Using default values: 1s transition, 10s minimum time, elegant curve
-  });
 
   useEffect(() => {
     // Select a random video each time the component mounts
@@ -97,7 +81,7 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
     <>
       {/* Background Image (shown while video loads) */}
       {showImage && currentImage && (
-        <div 
+        <div
           className={`${LAYOUT.PATTERNS.FIXED_OVERLAY} bg-cover bg-center bg-no-repeat z-[${LAYOUT.Z_INDEX.BACKGROUND}]`}
           style={{
             backgroundImage: `url(${currentImage.path})`,
@@ -140,7 +124,7 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
           style={overlayConfig.style}
         />
       )}
-      
+
       {/* Debug Info - Remove in production */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs space-y-1">
@@ -150,7 +134,7 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
           <div>Current Video: {currentVideo.split('/').pop()}</div>
         </div>
       )}
-      
+
       {/* Video Credits */}
       <div className={`fixed bottom-20 right-4 z-[${LAYOUT.Z_INDEX.CREDITS}] text-white/60 text-xs font-light backdrop-blur-sm bg-black/20 px-2 py-1 rounded-sm transition-all duration-300`}>
         Visuals by{' '}
