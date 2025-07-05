@@ -60,14 +60,21 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## Documentation
+## 📚 Documentation
 
-Detailed documentation about the project architecture, features, and implementation can be found in the [`docs/`](docs/) folder:
+Detailed documentation for this project is available in the [`docs/`](docs/) folder:
 
-- **[SOLID Principles & Code Improvements](docs/SOLID_IMPROVEMENTS.md)** - Overview of SOLID principles implementation and code quality improvements
-- **[Background Video Component](docs/BACKGROUND_VIDEO_IMPROVEMENTS.md)** - Detailed implementation of the enhanced BackgroundVideo component
-- **[Background Video Fix](docs/BACKGROUND_VIDEO_FIX.md)** - Bug fixes and behavior corrections for the background video
-- **[Crossfade Transition Effect](docs/CROSSFADE_TRANSITION.md)** - Implementation of smooth image-to-video transition effects
+### Architecture & Code Quality
+- **[SOLID Principles Implementation](docs/SOLID_IMPROVEMENTS.md)** - Comprehensive guide on SOLID principles applied throughout the project
+- **[Code Quality Standards](docs/SOLID_IMPROVEMENTS.md#code-quality-standards)** - Best practices and coding standards
+
+### Component Documentation
+- **[BackgroundVideo Component](docs/BACKGROUND_VIDEO_IMPROVEMENTS.md)** - Detailed implementation guide for the background video system
+- **[Crossfade Transition Effect](docs/CROSSFADE_TRANSITION.md)** - Technical documentation for the image-to-video transition effect
+- **[Background Video Fixes](docs/BACKGROUND_VIDEO_FIX.md)** - Bug fixes and behavioral improvements
+
+### Project Organization
+- **[Documentation Organization](docs/DOCUMENTATION_ORGANIZATION.md)** - How documentation is structured in this project
 
 ## How can I deploy this project?
 

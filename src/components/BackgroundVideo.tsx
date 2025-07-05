@@ -55,6 +55,24 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   const [videoKey, setVideoKey] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Use the background transition hook
+  const { 
+    currentImage, 
+    isVideoReady, 
+    showImage, 
+    showVideo, 
+    imageOpacity, 
+    videoOpacity,
+    handleVideoCanPlay,
+    handleVideoLoadedData,
+    transitionStyles
+  } = useBackgroundTransition({ 
+    videoRef,
+    transitionDuration: 1000,      // 1 second transition
+    minimumDisplayTime: 10000,     // 10 seconds minimum display time
+    transitionCurve: 'ELEGANT'     // Use elegant transition curve
+  });
+
   useEffect(() => {
     // Select a random video each time the component mounts
     const randomVideo = selectRandomVideo();
