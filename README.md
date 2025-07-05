@@ -60,6 +60,22 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## 📚 Documentation
+
+Detailed documentation for this project is available in the [`docs/`](docs/) folder:
+
+### Architecture & Code Quality
+- **[SOLID Principles Implementation](docs/SOLID_IMPROVEMENTS.md)** - Comprehensive guide on SOLID principles applied throughout the project
+- **[Code Quality Standards](docs/SOLID_IMPROVEMENTS.md#code-quality-standards)** - Best practices and coding standards
+
+### Component Documentation
+- **[BackgroundVideo Component](docs/BACKGROUND_VIDEO_IMPROVEMENTS.md)** - Detailed implementation guide for the background video system
+- **[Crossfade Transition Effect](docs/CROSSFADE_TRANSITION.md)** - Technical documentation for the image-to-video transition effect
+- **[Background Video Fixes](docs/BACKGROUND_VIDEO_FIX.md)** - Bug fixes and behavioral improvements
+
+### Project Organization
+- **[Documentation Organization](docs/DOCUMENTATION_ORGANIZATION.md)** - How documentation is structured in this project
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/057ad3c9-152e-4c05-904c-03cb064db68a) and click on Share -> Publish.
