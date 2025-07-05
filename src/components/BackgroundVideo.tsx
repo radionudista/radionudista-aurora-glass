@@ -69,7 +69,7 @@ const BackgroundVideo: React.FC<BackgroundVideoProps> = ({
   } = useBackgroundTransition({ 
     videoRef,
     transitionDuration: 1000,      // 1 second transition
-    minimumDisplayTime: 10000,     // 10 seconds minimum display time
+    minimumDisplayTime: 2000,     // 2 seconds minimum display time
     transitionCurve: 'ELEGANT'     // Use elegant transition curve
   });
 
