@@ -8,10 +8,8 @@ public: true
 program_order: 1
 date: 2024-01-01T00:00:00.000Z
 schedule: 'Mon 22:00 - America/Sao_Paulo'
-talent:
-  - Gustavo Perez
-social:
-  - '@gustavodesnudo'
+talent: ['Gustavo Perez']
+social: ['@gustavodesnudo']
 logo: 5.png
 audio_source: misterios.mp3
 schedule_meta:

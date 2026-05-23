@@ -8,10 +8,8 @@ public: true
 program_order: 6
 date: 2024-01-01T00:00:00.000Z
 schedule: 'Sat 18:00 - Europe/Madrid'
-talent:
-  - Lucho Milazzo
-social:
-  - '@luchomy'
+talent: ['Lucho Milazzo']
+social: ['@luchomy']
 logo: 7.png
 audio_source: sordera-selectiva.mp3
 schedule_meta:
