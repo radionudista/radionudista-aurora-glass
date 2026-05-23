@@ -164,39 +164,6 @@ const AboutPage: React.FC = () => {
             </div>
           </section>
 
-          {/* Image Block (Asymmetric) */}
-          <div className="my-24 -mx-8 md:-mx-24">
-            <div className="relative aspect-video bg-[#1b1b1b] overflow-hidden">
-              <img alt="Experimental Radio Setup" className="w-full h-full object-cover grayscale contrast-150 mix-blend-lighten" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEr4z-2MHqPb78Hn1HLFItyTGXm3GjnrPHbgx767_8tPNsDiDqcFh03T2mllfwl13mTJ0lNU8J60LAk6ekMrDeBsCuxr_yq0FosYpwZ7ceR6-bd9-sYbLWtRHdPOu6mq78lK_0mtIHM1XkUPa60sPES3k-NNQui5UYAd9CqrtvZcokKS6Ii_UyqMyNyfuA_XtylZqaCLwWbi2t7e7y_EMGoqH-YboXybsFk_knop1dfnrWt66Lcpx1EdlPpQjT6bwpUH0YLd-EQEQY"/>
-              {/* RadioNudista-style playful player embedded on the radio display */}
-              <div className="absolute left-[16.7%] top-[22.6%] w-[48.3%] h-[29.2%] border border-black/40 bg-white/30 backdrop-blur-[0.5px] overflow-hidden">
-                <div className="h-5 bg-black/58 border-b border-black/35 flex items-center justify-between px-2">
-                  <span className="font-['Space_Grotesk'] font-semibold text-[8.2px] tracking-widest uppercase text-white/95">Signal Explorer</span>
-                  <span className="font-['Space_Grotesk'] font-semibold text-[7.5px] uppercase tracking-wide text-white/90">No Juzgamos</span>
-                </div>
-                <div className="h-[calc(100%-20px)] p-2 flex flex-col justify-between text-[9px] leading-tight text-black/90">
-                  <div className="space-y-1">
-                    <p className="font-['Space_Grotesk'] font-semibold uppercase tracking-wide">Modo: frecuencia carnal</p>
-                    <p className="font-['Space_Grotesk'] font-semibold uppercase tracking-wide">Canal: perversión estéreo</p>
-                    <p className="font-['Space_Grotesk'] font-semibold uppercase tracking-wide">Estado: saturando el sistema</p>
-                  </div>
-                  <div className="space-y-2 mt-1.5">
-                    <p className="font-['Space_Grotesk'] font-semibold uppercase tracking-wide">Sintonia: Piel con piel (128kbps)</p>
-                    <p className="font-['Space_Grotesk'] font-semibold uppercase tracking-wide">Antena: Erecta y captando.</p>
-                    <p className="font-['Space_Grotesk'] font-semibold uppercase tracking-wide">Filtro: Eliminación de Inhibiciones</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                  </div>
-                </div>
-                <div className="absolute inset-x-0 top-[52%] h-[1px] bg-black/30" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-transparent to-transparent"></div>
-              <div className="absolute bottom-4 left-4 font-['Space_Grotesk'] text-[10px] tracking-widest uppercase text-[#919191]">
-                SIGNAL_SOURCE // TRANSMISSION_001
-              </div>
-            </div>
-          </div>
-
           {/* Credits Section with production data */}
           <footer className="mt-24 pt-12 border-t border-[#474747]/20">
             <div className="flex items-end justify-between gap-6 mb-10">
