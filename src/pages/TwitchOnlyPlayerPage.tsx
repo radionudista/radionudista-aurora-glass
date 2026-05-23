@@ -83,7 +83,7 @@ const TwitchOnlyPlayerPage = () => {
 
               <div className="mt-4">
                 <button
-                  onClick={() => window.open(env.STREAM_URL, '_blank')}
+                  onClick={() => window.open(env.STREAM_URL, '_blank', 'noopener,noreferrer')}
                   className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md font-semibold transition-colors text-sm"
                 >
                   🚀 Open Stream

@@ -1,9 +1,5 @@
 import React from 'react';
-import { Instagram, X } from 'lucide-react';
 import Navigation from './Navigation';
-import FooterSocialLink from './FooterSocialLink';
-import { PatreonButton } from './ui/patreon-button';
-import { useResponsive } from '../hooks/useResponsive';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,38 +12,48 @@ interface LayoutProps {
  * Dependency Inversion: Depends on Navigation abstraction
  */
 const Layout = ({ children }: LayoutProps) => {
-  const { isMobile } = useResponsive();
-
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation - Extracted to dedicated component */}
       <Navigation />
 
       {/* Main Content */}
-      <main className="flex-1 pt-20 pb-20">
+      <main className="flex-1 flex flex-col min-h-0 pt-28 md:pt-20">
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="glass-footer fixed bottom-0 left-0 right-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-center space-x-8">
-          <FooterSocialLink
-            url="https://www.instagram.com/radionudista"
-            ariaLabel="Follow us on Instagram"
-            icon={Instagram}
-          />
-          <FooterSocialLink
-            url="https://twitter.com/radionudista"
-            ariaLabel="Follow us on X"
-            icon={X}
-          />
-          <FooterSocialLink
-            url="https://linktr.ee/radionudista"
-            ariaLabel="Visit our Linktree"
-            svgPath="M0.2,33.1h24.2L7.1,16.7l9.5-9.6L33,23.8V0h14.2v23.8L63.6,7.1l9.5,9.6L55.8,33H80v13.5H55.7l17.3,16.7l-9.5,9.4L40,49.1L16.5,72.7L7,63.2l17.3-16.7H0V33.1H0.2z M33.1,65.8h14.2v32H33.1V65.8z"
-          />
-          {/* Only show PatreonButton in footer on desktop (when hamburger menu is not displayed) */}
-          {!isMobile && <PatreonButton absolute={true} />}
+      <footer className="bg-black w-full py-12 px-6 flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/10">
+        <div className="text-lg font-bold text-white font-['Space_Grotesk'] tracking-tighter uppercase">
+          © Radionudista
+        </div>
+        <div className="flex items-center gap-12 font-['Space_Grotesk'] text-xs uppercase tracking-widest">
+          <a
+            className="text-white/60 hover:text-white transition-opacity"
+            href="https://www.instagram.com/radionudista"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Instagram
+          </a>
+          <a
+            className="text-white/60 hover:text-white transition-opacity"
+            href="https://twitter.com/radionudista"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            X
+          </a>
+          <a
+            href="https://www.patreon.com/profile/creators?u=170209343"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white text-black px-6 py-2 font-bold hover:invert transition-all"
+          >
+            Apoyanos
+          </a>
+        </div>
+        <div className="text-[10px] text-white/55 font-['Space_Grotesk'] tracking-tighter uppercase">
+          Est. 2024 / Independent Radio
         </div>
       </footer>
     </div>

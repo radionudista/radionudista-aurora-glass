@@ -8,12 +8,14 @@ import i18n from '../config/i18n';
 import PagesLayout from '../components/PagesLayout';
 import HomePage from '../pages/HomePage';
 import AboutPage from '../pages/AboutPage';
-import ContactPage from '../pages/ContactPage';
 import NotFound from '../pages/NotFound';
 import SimplePage from '../pages/SimplePage';
 import { getContent } from '../lib/contentLoader';
 import ProgramPage from '@/pages/ProgramPage';
 import TwitchOnlyPlayerPage from '@/pages/TwitchOnlyPlayerPage';
+import SchedulePage from '../pages/SchedulePage';
+import ProgramDetailPage from '../pages/ProgramDetailPage';
+import EpisodeDetailPage from '../pages/EpisodeDetailPage';
 
 /**
  * Language Router Component
@@ -107,6 +109,9 @@ const AppRoutes: React.FC = () => {
           <Route index element={<HomePage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="programacion" element={<ProgramPage />} />
+          <Route path="programacion/:programId/:episodeId" element={<EpisodeDetailPage />} />
+          <Route path="programacion/:programId" element={<ProgramDetailPage />} />
+          <Route path="schedule" element={<SchedulePage />} />
           {/* Dynamic content pages: /{lang}/{slug} */}
           <Route path=":slug" element={<DynamicSimplePageWrapper lang={lang} />} />
         </Route>

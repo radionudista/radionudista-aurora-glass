@@ -1,110 +1,310 @@
-
-
-import React, { useMemo } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import contentIndex from '../contentIndex.json';
+﻿import React, { useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Search } from 'lucide-react';
 import { env } from '../config/env';
-import { useLocation } from 'react-router-dom';
-import ProgramPlayer from '../components/ProgramPlayer';
-import ReactMarkdown from 'react-markdown';
+import { useOptionalEditor } from '../contexts/EditorContext';
+import { useContentIndexData } from '../hooks/useEditorContent';
+import { mapUiLanguageToContentLanguage } from '../utils/contentLanguage';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  PAGE_SCREEN_TITLE_CLASS,
+  PAGE_SHELL_BELOW_NAV,
+  PAGE_SHELL_CONTENT,
+} from '../constants/layoutConstants';
 
 interface ShowData {
   id: string;
   title: string;
-  description: string;
-  audio_source?: string;
-  schedule?: string;
+  content?: string;
   talent?: string[];
-  social?: string[];
   logo?: string;
+  component?: string;
+  public?: boolean | string;
   program_order?: number;
 }
 
-const ProgramPage = () => {
-  const isMobile = useIsMobile();
+const INITIAL_VISIBLE_SHOWS = 12;
+
+const normalize = (value?: string): string =>
+  (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+const hashString = (value: string): number => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const ProgramPage: React.FC = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const editor = useOptionalEditor();
+  const contentIndex = useContentIndexData();
   const location = useLocation();
-  // Determine current language from path (e.g., /es/slug)
-  const supportedLangs = env.SUPPORTED_LANGUAGES;
-  const getCurrentLang = (pathname: string, supportedLangs: string[]): string => {
-    const parts = pathname.split('/').filter(Boolean);
-    if (parts.length > 0 && supportedLangs.includes(parts[0])) return parts[0];
-    return supportedLangs[0]; // fallback
-  };
-  const currentLang = getCurrentLang(location.pathname, supportedLangs);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [visibleShows, setVisibleShows] = useState(INITIAL_VISIBLE_SHOWS);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newId, setNewId] = useState('');
+  const [newTitleEs, setNewTitleEs] = useState('');
+  const [newTitlePt, setNewTitlePt] = useState('');
+  const [newSchedule, setNewSchedule] = useState('');
 
+  const currentLang = useMemo(() => {
+    const parts = location.pathname.split('/').filter(Boolean);
+    if (parts.length > 0 && env.SUPPORTED_LANGUAGES.includes(parts[0])) return parts[0];
+    return env.SUPPORTED_LANGUAGES[0];
+  }, [location.pathname]);
+  const contentLang = mapUiLanguageToContentLanguage(currentLang);
 
-  // Build showList dynamically from contentIndex.json (with audio_source from index)
-  const showListRaw = useMemo(() => {
-    const shows = Object.values(contentIndex)
-      .map(entry => entry[currentLang])
+  const allShows = useMemo(() => {
+    return Object.values(contentIndex)
+      .map((entry) => entry[contentLang] as ShowData | undefined)
       .filter(Boolean)
-      .filter(entry => entry.component === 'ProgramPage' && (entry.public === true || entry.public === 'true'));
-    return shows.sort((a, b) => (a.program_order ?? 9999) - (b.program_order ?? 9999));
-  }, [currentLang]);
+      .filter((entry) => entry.component === 'ProgramPage' && (entry.public === true || entry.public === 'true'))
+      .map((entry) => ({
+        ...entry,
+        content: entry.content || '',
+      }));
+  }, [contentIndex, contentLang]);
 
-  // Process show list with content from contentIndex (loaded at build time)
-  const showList = useMemo(() => {
-    return showListRaw.map(show => ({
-      ...show,
-      description: (show as any).content || '', // Content from markdown body (loaded at build time)
-      audio_source: (show as unknown).audio_source || ''
-    }));
-  }, [showListRaw]);
+  const orderedShows = useMemo(() => {
+    return [...allShows].sort((a, b) => {
+      const oa = a.program_order ?? 999;
+      const ob = b.program_order ?? 999;
+      if (oa !== ob) return oa - ob;
+      return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+    });
+  }, [allShows]);
+
+  const filteredShows = useMemo(() => {
+    const query = normalize(searchQuery);
+    if (!query) return orderedShows;
+
+    return orderedShows.filter((show) => {
+      const searchable = normalize(`${show.title} ${show.talent?.join(' ') || ''} ${show.content || ''}`);
+      return searchable.includes(query);
+    });
+  }, [orderedShows, searchQuery]);
+
+  const visibleFilteredShows = filteredShows.slice(0, visibleShows);
+  const hasMoreShows = visibleFilteredShows.length < filteredShows.length;
+
+  const handleCreateProgram = async () => {
+    if (!editor?.enabled) return;
+    const id = newId
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/_/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    if (!id) return;
+    const createdId = await editor.createProgram({
+      id,
+      titleEs: newTitleEs.trim(),
+      titlePt: (newTitlePt.trim() || newTitleEs.trim()),
+      schedule: newSchedule.trim() || undefined,
+    });
+    if (createdId) {
+      setCreateOpen(false);
+      setNewId('');
+      setNewTitleEs('');
+      setNewTitlePt('');
+      setNewSchedule('');
+      void navigate(`/${currentLang}/programacion/${encodeURIComponent(createdId)}`);
+    }
+  };
 
   return (
-    <div className='container mx-auto px-6 py-12'>
-      <div className=" max-w-4xl mx-auto">
-        <div className="flex flex-col">
+    <section className={PAGE_SHELL_BELOW_NAV}>
+      <header className={PAGE_SHELL_CONTENT}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className={`${PAGE_SCREEN_TITLE_CLASS} leading-none text-white`}>
+            {t('programs.page-title')}
+          </h1>
+          {editor?.enabled ? (
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="shrink-0 border border-white/35 bg-black/40 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white transition hover:border-white hover:bg-white/10"
+            >
+              {t('programs.create-program')}
+            </button>
+          ) : null}
+        </div>
 
-          {showList.map((show, index) => (
-            <div key={show.id} className="glass-card mb-8" >
-              <div className="flex sm:flex-row flex-col mb-[0.5rem]">
-                <div className="show-name flex-[2_2_0] sm:mb-[0] mb-[1rem] text-white sm:pr-6">
-                  <h3 className="text-3xl font-bold text-white mb-6">{show.title}</h3>
+        <div className="mt-6 grid grid-cols-1 border border-white/20 md:grid-cols-[1fr_auto]">
+          <label className="relative flex min-h-[48px] min-w-0 border-b border-white/20 md:border-b-0 md:border-r md:border-white/20">
+            <span className="sr-only">{t('programs.search-label')}</span>
+            <input
+              type="search"
+              value={searchQuery}
+              autoComplete="off"
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setVisibleShows(INITIAL_VISIBLE_SHOWS);
+              }}
+              placeholder={t('programs.search-placeholder')}
+              className="h-full min-h-[48px] w-full bg-black/40 px-4 py-3 font-['Space_Grotesk'] text-sm text-white placeholder:text-white/40 focus:bg-black/55 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/15 md:text-[0.8125rem] md:tracking-wide"
+            />
+          </label>
 
-                  {/* Full Program Description */}
-                  <div className="text-white mb-6 text-justify prose prose-invert max-w-none">
-                    <ReactMarkdown>{show.description}</ReactMarkdown>
-                  </div>
+          <div className="flex min-h-[48px] items-center justify-center px-4 text-white/55 md:min-w-[3.25rem]">
+            <Search size={18} strokeWidth={2} aria-hidden />
+          </div>
+        </div>
+      </header>
 
-                  {/* Program Details */}
-                  <div className="mb-6">
-                    <p className='mb-3 text-white'>
-                      <b>conducido por:</b> {
-                        Array.isArray(show.talent) && show.talent.map((t, i) => (
-                          show.talent.length === i + 1 ? <span key={`talent_${i}`}>{t} ({show.social?.[i]}) </span> : <><span key={`talent_${i}`}>{t} ({show.social?.[i]})</span><span> - </span></>
-                        ))
-                      }
-                    </p>
-                    <p className="text-white mb-4">
-                      {show.schedule}
-                    </p>
-                  </div>
+      <div
+        className={`${PAGE_SHELL_CONTENT} mt-8 grid grid-cols-1 gap-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`}
+      >
+        {visibleFilteredShows.map((show) => {
+          const visualId = String((hashString(show.id) % 12) + 1);
+          const pseudoEpisodes = (hashString(show.title) % 12) + 1;
 
-                  {/* Program Player */}
-                  <div className="mt-6">
-                    <ProgramPlayer
-                      programId={show.id}
-                      audioSource={show.audio_source || ''}
-                      title={show.title}
-                    />
-                  </div>
-                </div>
-                <div className="show-time flex-[1_1_0] flex flex-col items-center justify-start sm:mb-[0] mb-[1rem] text-white">
+          return (
+            <article key={show.id} className="group">
+              <Link
+                to={`/${currentLang}/programacion/${show.id}`}
+                className="block overflow-hidden border border-white/20 bg-black"
+              >
+                <div className="aspect-[4/3] overflow-hidden bg-[#0a0a0a]">
                   <img
-                    src={`/images/logos/${show.logo}`}
-                    alt={`${show.title} logo`}
-                    className="w-full max-w-sm rounded-lg shadow-lg"
-                    style={{ width: isMobile ? '100%' : '300px' }}
+                    src={show.logo ? `/images/logos/${show.logo}` : `/images/logos/${visualId}.png`}
+                    alt={show.title}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                   />
                 </div>
-              </div>
-            </div>
-          ))}
+              </Link>
 
-        </div>
+              <div className="pt-3">
+                <Link
+                  to={`/${currentLang}/programacion/${show.id}`}
+                  className="block font-['Space_Grotesk'] text-2xl font-bold uppercase leading-[0.95] tracking-tighter text-white transition hover:underline xl:text-[1.65rem] xl:leading-tight"
+                >
+                  {show.title}
+                </Link>
+
+                <div className="mt-2 flex items-center">
+                  <span className="inline-flex min-h-6 items-center border border-white/45 bg-white/5 px-2.5 py-1 font-['Space_Grotesk'] text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-white/90">
+                    {pseudoEpisodes} {t('programs.episodes-label')}
+                  </span>
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
-    </div>
+
+      {filteredShows.length === 0 && (
+        <p className={`${PAGE_SHELL_CONTENT} mt-10 font-['Space_Grotesk'] text-sm uppercase tracking-widest text-white/70`}>
+          {t('programs.empty')}
+        </p>
+      )}
+
+      {hasMoreShows && (
+        <div className={`${PAGE_SHELL_CONTENT} mt-8 flex justify-center`}>
+          <button
+            type="button"
+            onClick={() => setVisibleShows((prev) => prev + INITIAL_VISIBLE_SHOWS)}
+            className="border border-white px-5 py-3 font-['Space_Grotesk'] text-xs font-bold uppercase tracking-widest text-white transition hover:bg-white hover:text-black"
+          >
+            {t('programs.show-more')}
+          </button>
+        </div>
+      )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto border border-white/25 bg-[#0a0a0a] text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-['Space_Grotesk'] text-xl uppercase tracking-tight text-white">
+              {t('programs.create-program-title')}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-white/55">
+              {t('programs.create-program-description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-1">
+            <label className="grid gap-1.5 text-left">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-white/45">
+                {t('programs.create-program-id')}
+              </span>
+              <input
+                value={newId}
+                onChange={(e) => setNewId(e.target.value)}
+                autoComplete="off"
+                placeholder="mi-programa-nuevo"
+                className="border border-white/25 bg-black/60 px-3 py-2 font-mono text-sm text-white placeholder:text-white/30 focus:border-white/45 focus:outline-none"
+              />
+            </label>
+            <label className="grid gap-1.5 text-left">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-white/45">
+                {t('programs.create-program-title-es')}
+              </span>
+              <input
+                value={newTitleEs}
+                onChange={(e) => setNewTitleEs(e.target.value)}
+                className="border border-white/25 bg-black/60 px-3 py-2 text-sm text-white focus:border-white/45 focus:outline-none"
+              />
+            </label>
+            <label className="grid gap-1.5 text-left">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-white/45">
+                {t('programs.create-program-title-pt')}
+              </span>
+              <input
+                value={newTitlePt}
+                onChange={(e) => setNewTitlePt(e.target.value)}
+                placeholder={newTitleEs || '…'}
+                className="border border-white/25 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-white/35 focus:border-white/45 focus:outline-none"
+              />
+            </label>
+            <label className="grid gap-1.5 text-left">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-white/45">
+                {t('programs.create-program-schedule')}
+              </span>
+              <input
+                value={newSchedule}
+                onChange={(e) => setNewSchedule(e.target.value)}
+                placeholder="ej. miércoles 20:00 - ESP"
+                className="border border-white/25 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-white/35 focus:border-white/45 focus:outline-none"
+              />
+            </label>
+          </div>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(false)}
+              className="border border-white/30 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-white/85 hover:bg-white/10"
+            >
+              {t('programs.create-program-cancel')}
+            </button>
+            <button
+              type="button"
+              disabled={editor?.saving || !newId.trim() || !newTitleEs.trim()}
+              onClick={() => void handleCreateProgram()}
+              className="border border-white bg-white px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-black hover:bg-white/90 disabled:opacity-40"
+            >
+              {t('programs.create-program-submit')}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 };
 

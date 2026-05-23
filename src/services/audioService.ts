@@ -15,13 +15,30 @@ export interface AudioValidationResult {
  * Follows Open/Closed Principle - extensible for different audio types
  */
 export class AudioService {
+  private static shouldUseAnonymousCors(url: string): boolean {
+    // Use anonymous CORS only for same-origin assets.
+    // External hosts (e.g., Archive.org) can fail validation/playback if forced.
+    if (!url) return false;
+    if (url.startsWith('/')) return true;
+    if (typeof window === 'undefined') return false;
+
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return parsed.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Create configured HTML5 Audio instance
    */
   static createAudioInstance(url: string, volume: number = 0.8): HTMLAudioElement {
     const audio = new Audio(url);
     audio.preload = 'none';
-    audio.crossOrigin = 'anonymous';
+    if (AudioService.shouldUseAnonymousCors(url)) {
+      audio.crossOrigin = 'anonymous';
+    }
     audio.volume = volume;
     return audio;
   }
@@ -231,7 +248,9 @@ export class AudioService {
 
       // Start loading with minimal preload to test accessibility
       testAudio.preload = 'metadata';
-      testAudio.crossOrigin = 'anonymous';
+      if (AudioService.shouldUseAnonymousCors(url)) {
+        testAudio.crossOrigin = 'anonymous';
+      }
       testAudio.src = url;
     });
   }

@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .env
 .env.*
+!.env.example
+.editor-translate-usage.json
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +26,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Internal planning & AI docs (not for repo)
+CLAUDE.md
+planificacion_version1.1.md
+prep_meet_v1.1.txt
