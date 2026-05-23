@@ -103,7 +103,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const programAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioInstancesRef = useRef<Set<HTMLAudioElement>>(new Set());
-  const autoplayAttemptedRef = useRef(false);
   const streamService = useRef(
     new RadioStreamService(
       STREAM_CONFIG.statusUrl,
@@ -250,17 +249,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('canplay', handleAudioCanPlay);
     audio.addEventListener('waiting', handleAudioWaiting);
     audio.addEventListener('error', handleAudioError);
-    audio.addEventListener('playing', () => {
-      if (audio === audioRef.current) {
-        setIsPlaying(true);
-        setIsLoading(false);
-      }
-    });
-    audio.addEventListener('pause', () => {
-      if (audio === audioRef.current) {
-        setIsPlaying(false);
-      }
-    });
 
     return audio;
   }, [volume, isMuted, handleAudioLoadStart, handleAudioCanPlay, handleAudioWaiting, handleAudioError, registerAudioInstance]);
@@ -687,28 +675,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setError(null);
   }, []);
 
-  const startRadioPlayback = useCallback(async () => {
-    if (currentSource === 'program') return;
-
-    if (!audioRef.current) {
-      audioRef.current = createConfiguredAudio();
-    }
-
-    setIsLoading(true);
-    const result = await AudioService.safePlay(audioRef.current);
-    if (result.success) {
-      setIsPlaying(true);
-      setCurrentSource('radio');
-      setError(null);
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
-      if (!result.requiresUserInteraction) {
-        setError(result.error || 'Failed to start radio playback');
-      }
-    }
-  }, [currentSource, createConfiguredAudio]);
-
   /**
    * State persistence utilities for maintaining playback across navigation
    */
@@ -803,30 +769,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     restoreAudioState();
   }, [restoreAudioState]);
-
-  // Autoplay radio on first visit; retry once if the browser blocks autoplay
-  useEffect(() => {
-    if (autoplayAttemptedRef.current) return;
-    autoplayAttemptedRef.current = true;
-
-    if (currentSource !== 'radio' || currentProgramId) return;
-
-    void startRadioPlayback();
-
-    const retryOnInteraction = () => {
-      if (!audioRef.current || audioRef.current.paused) {
-        void startRadioPlayback();
-      }
-    };
-
-    document.addEventListener('pointerdown', retryOnInteraction, { once: true });
-    document.addEventListener('keydown', retryOnInteraction, { once: true });
-
-    return () => {
-      document.removeEventListener('pointerdown', retryOnInteraction);
-      document.removeEventListener('keydown', retryOnInteraction);
-    };
-  }, [currentSource, currentProgramId, startRadioPlayback]);
 
   // State persistence effect - persist state changes
   useEffect(() => {
