@@ -1,22 +1,25 @@
 
 import contentIndex from '../contentIndex.json';
 
+type ContentMeta = Record<string, unknown> & { slug: string; markdownfile?: string };
+type ContentIndexData = Record<string, Record<string, ContentMeta>>;
+
 // Helper to fetch contentIndex.json via HTTP if needed in the future
-export async function fetchContentIndex(): Promise<any> {
+export async function fetchContentIndex(): Promise<ContentIndexData> {
   const res = await fetch('/contentIndex.json?t=' + Date.now()); // Add cache busting
   if (!res.ok) throw new Error('Failed to fetch contentIndex.json');
-  return res.json();
+  return (await res.json()) as ContentIndexData;
 }
 
 // Vite import all markdown files in src/content/*/*.md
 const markdownFiles = import.meta.glob('../content/*/*.md', { query: '?raw', import: 'default', eager: true });
 
 // Build a map: { [lang]: { [slug]: { ...meta, markdown } } }
-let contentMap: Record<string, Record<string, any>> = {};
+let contentMap: Record<string, Record<string, ContentMeta & { markdown: string }>> = {};
 
 // Function to build content map from index
-function buildContentMap(index: any) {
-  const map: Record<string, Record<string, any>> = {};
+function buildContentMap(index: ContentIndexData) {
+  const map: Record<string, Record<string, ContentMeta & { markdown: string }>> = {};
   
   for (const [id, langs] of Object.entries(index)) {
     for (const [lang, meta] of Object.entries(langs as Record<string, unknown>)) {
@@ -57,7 +60,9 @@ export async function reloadContent() {
 }
 
 export function getContent(lang: string, slug: string) {
-  return contentMap[lang]?.[slug] || null;
+  if (contentMap[lang]?.[slug]) return contentMap[lang][slug];
+  if (lang === 'en') return contentMap.es?.[slug] || null;
+  return null;
 }
 
 export function getAllSlugs(lang: string): string[] {

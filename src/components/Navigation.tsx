@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import contentIndex from '../contentIndex.json';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import Logo from './Logo';
-
-import MiniPlayer from './MiniPlayer';
 import { PatreonButton } from './ui/patreon-button';
 import { env } from '../config/env';
 import { useTranslation } from 'react-i18next';
+import { useAudio } from '../contexts/AudioContext';
+import { useNewsTicker } from '../hooks/useTextScrolling';
+import { useContentIndexData } from '../hooks/useEditorContent';
+import { mapUiLanguageToContentLanguage } from '../utils/contentLanguage';
+import MediaButton from './ui/MediaButton';
+import EditorPublishBar from './EditorPublishBar';
 
 interface NavigationItem {
   id: string;
@@ -37,19 +40,24 @@ interface NavigationProps {
  * Dependency Inversion: Depends on abstractions (useLocation, Link)
  */
 const Navigation: React.FC<NavigationProps> = ({
-  navItems = [
-    { id: 'home', label: 'radio' , path: '/' }
-  ],
+  navItems = [{ id: 'home', label: 'radio', path: '/' }],
   className = '',
-  postNavItems = [{ id: 'program', label: 'programacion' , path: 'programacion' }],
+  postNavItems = [
+    { id: 'program', label: 'archivo', path: 'programacion' },
+    { id: 'schedule', label: 'programacion', path: 'schedule' },
+    { id: 'about', label: 'about', path: 'about' },
+  ],
 }) => {
     const { t } = useTranslation();
+  const audio = useAudio();
+  const contentIndex = useContentIndexData();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   // --- Dynamic nav items from indexed content (contentIndex.json) ---
   const supportedLangs = env.SUPPORTED_LANGUAGES;
   const currentLang = getCurrentLang(location.pathname, supportedLangs);
+  const contentLang = mapUiLanguageToContentLanguage(currentLang);
 
   // Helper to prefix nav paths with current language
   const getNavPath = (item: NavigationItem) => {
@@ -62,22 +70,20 @@ const Navigation: React.FC<NavigationProps> = ({
     return `/${item.path}`;
   };
 
-  // Helper: is current path a home route for any supported language?
-  const isHomeRoute = React.useMemo(() => {
-    // Accepts /, /es, /pt, etc. (with or without trailing slash)
-    const path = location.pathname.replace(/\/+$/, ''); // remove trailing slash
-    if (path === '') return true; // root
-    return supportedLangs.some(lang => path === `/${lang}`);
-  }, [location.pathname, supportedLangs]);
-
   // No fetch needed; contentIndex.json is imported as a module
 
   const dynamicNavItems: NavigationItem[] = useMemo(() => {
     // Collect all public, menu'd items for current language
     const items: NavigationItem[] = [];
-    Object.entries(contentIndex).forEach(([id, langs]: [string, any]) => {
-      const entry = langs[currentLang];
-      if (entry && entry.menu && (entry.public === true || entry.public === 'true')) {
+    const staticRouteIds = new Set(['acerca-de-nosotros']);
+    Object.entries(contentIndex).forEach(([id, langs]) => {
+      const entry = (langs as Record<string, Record<string, unknown>>)[contentLang];
+      if (
+        entry &&
+        entry.menu &&
+        (entry.public === true || entry.public === 'true') &&
+        !staticRouteIds.has(id)
+      ) {
         items.push({
           id: `${id}-${currentLang}`,
           label: entry.menu,
@@ -89,11 +95,11 @@ const Navigation: React.FC<NavigationProps> = ({
     return items.sort((a, b) => {
       const idA = a.id?.split('-')[0];
       const idB = b.id?.split('-')[0];
-      const posA = contentIndex?.[idA]?.[currentLang]?.menu_position ?? 9999;
-      const posB = contentIndex?.[idB]?.[currentLang]?.menu_position ?? 9999;
+      const posA = contentIndex?.[idA]?.[contentLang]?.menu_position ?? 9999;
+      const posB = contentIndex?.[idB]?.[contentLang]?.menu_position ?? 9999;
       return posA - posB;
     });
-  }, [currentLang]);
+  }, [contentIndex, contentLang, currentLang]);
 
   // Translate static navItems labels using full key path (e.g., navigation.radio)
   const translatedNavItems = navItems.map(item => ({
@@ -104,8 +110,22 @@ const Navigation: React.FC<NavigationProps> = ({
     ...item,
     label: t(`navigation.${item.label}`)
   }));
-  // Merge static and dynamic nav items (dynamic after static)
-  const mergedNavItems = [...translatedNavItems, ...dynamicNavItems, ...translatedPostNavItems];
+  // Orden: Radio → Archivos → Schedule → Nosotrxs, luego entradas extra del índice
+  const mergedNavItems = [...translatedNavItems, ...translatedPostNavItems, ...dynamicNavItems];
+  const primaryNavItems = mergedNavItems.filter(
+    (item) => item.id === 'home' || item.id === 'about' || item.id === 'program' || item.id === 'schedule'
+  );
+  const liveText = audio.currentTrack || 'TRANSMITTING...';
+  const { containerRef, textRef } = useNewsTicker({
+    text: liveText,
+    isActive: true,
+    speed: 35,
+  });
+  const { containerRef: mobileContainerRef, textRef: mobileTextRef } = useNewsTicker({
+    text: liveText,
+    isActive: true,
+    speed: 35,
+  });
 
   const handleMobileNavClick = () => {
     setIsMobileMenuOpen(false);
@@ -119,68 +139,124 @@ const Navigation: React.FC<NavigationProps> = ({
     setIsMobileMenuOpen(true);
   };
 
+  const playButton = (
+    <MediaButton
+      isPlaying={audio.isPlaying}
+      isLoading={audio.isLoading}
+      onClick={audio.togglePlay}
+      size="small"
+      className="w-8 h-8 shrink-0 border border-white/20 text-white hover:border-white/50"
+    />
+  );
+
   return (
     <>
-      {/* Main Navigation Bar */}
-      <nav className={`glass-navbar fixed top-0 left-0 right-0 z-50 px-6 py-4 md:px-8 ${className}`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Logo Section */}
-          <Logo size="medium" />
+      {/* Main Navigation Bar: [ logo · reproductor ] | [ nav links ] */}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 sm:px-6 h-20 w-full gap-3 sm:gap-4 ${className}`}
+      >
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-center md:flex">
+          <EditorPublishBar className="pointer-events-auto" />
+        </div>
 
-          {/* Mini Player - Desktop only, hidden on any home route (/{lang}) */}
-          {!isHomeRoute && (
-            <div className="hidden md:block">
-              <MiniPlayer />
-            </div>
-          )}
+        {/* Izquierda: solo logo */}
+        <div className="flex shrink-0 items-center min-w-0">
+          <Logo size="medium" className="scale-110 origin-left" />
+        </div>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex space-x-8 items-center">
-            {mergedNavItems.map((item) => {
-              const navPath = getNavPath(item);
-              const isActive = location.pathname === navPath;
-              return (
-                <Link
-                  key={item.id}
-                  to={navPath}
-                  className={`nav-link px-4 py-2 ${isActive ? 'active' : ''}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  style={{ fontFamily: "'AkzidenzGrotesk', sans-serif" }}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-            {/* PatreonButton removed from desktop nav */}
+        {/* Centro: reproductor (desktop) — queda entre logo y enlaces */}
+        <div className="hidden md:flex flex-1 items-center justify-center gap-3 min-w-0 max-w-[min(100%,480px)] px-2 mx-2">
+          {playButton}
+          <span className="font-['Space_Grotesk'] text-sm tracking-[0.16em] text-white/70 uppercase whitespace-nowrap shrink-0">
+            LIVE:
+          </span>
+          <div
+            ref={containerRef}
+            className="relative min-w-0 flex-1 overflow-hidden h-5 max-w-[320px] lg:max-w-[380px]"
+            aria-live="polite"
+          >
+            <span
+              ref={textRef}
+              className="absolute left-0 top-0 font-['Space_Grotesk'] text-sm tracking-[0.12em] text-white/70 uppercase whitespace-nowrap"
+            >
+              {liveText}
+            </span>
           </div>
+        </div>
 
-          {/* Mobile Menu Button */}
+        {/* Derecha: enlaces (desktop) */}
+        <div className="hidden md:flex shrink-0 items-center justify-end gap-6 lg:gap-8 font-['Space_Grotesk'] tracking-tighter uppercase text-[17px] min-w-0">
+          {primaryNavItems.map((item) => {
+            const navPath = getNavPath(item);
+            const isActive = location.pathname === navPath;
+            return (
+              <Link
+                key={item.id}
+                to={navPath}
+                className={
+                  isActive
+                    ? 'text-white font-bold border-b-2 border-white pb-1 shrink-0'
+                    : 'text-white/60 hover:text-white transition-colors shrink-0'
+                }
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Móvil: play compacto + menú */}
+        <div className="flex md:hidden items-center gap-2 shrink-0">
+          {playButton}
           <button
-            className="md:hidden nav-link p-2"
+            type="button"
+            className="text-white p-1"
             onClick={openMobileMenu}
             aria-label="Open navigation menu"
           >
-            <Menu className="w-7 h-7" />
+            <Menu className="w-6 h-6" />
           </button>
         </div>
       </nav>
+      <div className="fixed top-20 left-0 right-0 z-40 flex h-8 items-center gap-2 border-b border-white/10 bg-black/95 px-4 md:hidden">
+        <span className="font-['Space_Grotesk'] text-[10px] tracking-[0.18em] text-white/55 uppercase shrink-0">
+          Live:
+        </span>
+        <div
+          ref={mobileContainerRef}
+          className="relative min-w-0 flex-1 overflow-hidden h-4"
+          aria-live="polite"
+        >
+          <span
+            ref={mobileTextRef}
+            className="absolute left-0 top-0 font-['Space_Grotesk'] text-xs tracking-[0.12em] text-white/70 uppercase whitespace-nowrap"
+          >
+            {liveText}
+          </span>
+        </div>
+      </div>
 
       {/* Mobile Navigation Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[9999] md:hidden" role="dialog" aria-modal="true">
-          {/* Mobile Menu Panel - Solid black background covering screen except footer area */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-hidden />
+          {/* Mobile Menu Panel - Updated visual style */}
           <div
-            className={`absolute top-0 left-0 right-0 bottom-16 bg-black transform transition-transform duration-300 ease-out ${
+            className={`absolute top-0 left-0 right-0 bottom-16 border-b border-white/10 bg-[#0a0a0b]/95 backdrop-blur-xl transform transition-transform duration-300 ease-out ${
               isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
             }`}
             role="navigation"
             aria-label="Mobile navigation menu"
           >
             {/* Close Button - Positioned at top right */}
-            <header className="flex justify-end p-6">
+            <header className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+              <span className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.18em] text-white/45">
+                Menu
+              </span>
               <button
                 onClick={closeMobileMenu}
-                className="nav-link p-2"
+                className="inline-flex h-9 w-9 items-center justify-center border border-white/20 text-white/80 transition hover:border-white/45 hover:text-white"
                 aria-label="Close navigation menu"
               >
                 <X className="w-6 h-6" />
@@ -188,7 +264,7 @@ const Navigation: React.FC<NavigationProps> = ({
             </header>
 
             {/* Mobile Navigation Links - Positioned at top */}
-            <div className="px-8 py-8 space-y-6">
+            <div className="px-6 py-6 space-y-3">
               {mergedNavItems.map((item) => {
                 const navPath = getNavPath(item);
                 const isActive = location.pathname === navPath;
@@ -197,10 +273,11 @@ const Navigation: React.FC<NavigationProps> = ({
                     key={item.id}
                     to={navPath}
                     onClick={handleMobileNavClick}
-                    className={`nav-link-mobile text-center py-4 px-6 text-xl block w-full transition-all duration-200 ${
-                      isActive ? 'active' : ''
+                    className={`block w-full border px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] transition-all duration-200 ${
+                      isActive
+                        ? 'border-white bg-white text-black'
+                        : 'border-white/15 bg-white/[0.02] text-white/75 hover:border-white/40 hover:text-white'
                     }`}
-                    style={{ fontFamily: "'AkzidenzGrotesk', sans-serif" }}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {item.label}
@@ -208,16 +285,11 @@ const Navigation: React.FC<NavigationProps> = ({
                 );
               })}
 
-              {/* Mini Player in Mobile Menu - Hidden on any home route (/{lang}) */}
-              {!isHomeRoute && (
-                <div className="mt-8 flex justify-center">
-                  <MiniPlayer />
-                </div>
-              )}
+              {/* Mobile menu keeps links-only to reduce noise */}
             </div>
 
             {/* PatreonButton positioned at bottom of mobile menu panel */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 border-t border-white/10 pt-5">
               <PatreonButton absolute={false} className="relative" />
             </div>
           </div>

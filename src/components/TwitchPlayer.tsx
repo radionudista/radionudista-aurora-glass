@@ -89,7 +89,7 @@ const TwitchPlayer = () => {
               
               <div className="mt-6">
                 <button 
-                  onClick={() => window.open(env.STREAM_URL, '_blank')}
+                  onClick={() => window.open(env.STREAM_URL, '_blank', 'noopener,noreferrer')}
                   className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-md font-semibold transition-colors"
                 >
                   🚀 Open in Twitch

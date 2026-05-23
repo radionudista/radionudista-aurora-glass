@@ -42,9 +42,9 @@ const MiniPlayer = () => {
         className="flex items-center justify-center flex-shrink-0"
         style={{ width: '24px', height: '24px' }} // Fixed container size
       >
-        {!audioContext.isPlaying ? (
+        {audioContext.isLoading || !audioContext.isPlaying ? (
           <MediaButton
-            isPlaying={false}
+            isPlaying={audioContext.isPlaying}
             isLoading={audioContext.isLoading}
             onClick={audioContext.togglePlay}
             size="small"

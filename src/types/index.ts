@@ -54,3 +54,52 @@ export interface MediaConfiguration {
     updateInterval: number;
   };
 }
+
+// Calendar Types
+export interface ScheduleEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startTime: Date;
+  endTime: Date;
+  programId?: string;
+  color?: string;
+  recurrence?: string[];
+}
+
+export interface ICalendarService {
+  getWeeklySchedule(timeMin: Date, timeMax: Date): Promise<ScheduleEvent[]>;
+}
+
+// Archive / Episodes Types
+export interface Episode {
+  id: string;
+  title: string;
+  date: string; // ISO date string (YYYY-MM-DD)
+  duration: string; // e.g. "58:30"
+  description?: string;
+  audioUrl: string;
+  /** Internet Archive item identifier used for this episode upload. */
+  archiveIdentifier?: string;
+  /** Overrides collaborators shown in this episode detail (falls back to program talent). */
+  collaborators?: string[];
+  tags?: string[];
+  /** Líneas tipo "Artista — Tema" o una sola línea por tema */
+  tracklist?: string[];
+  /** Ruta bajo /public o URL absoluta; si no hay, se usa el logo del programa */
+  coverImage?: string;
+}
+
+export interface ProgramEpisodes {
+  programId: string;
+  episodes: Episode[];
+}
+
+export interface ProgramEpisodesTrash {
+  programId: string;
+  episodes: Episode[];
+}
+
+export interface IEpisodeService {
+  getEpisodesByProgram(programId: string): Promise<ProgramEpisodes>;
+}

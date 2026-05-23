@@ -6,11 +6,13 @@ id: checkpoint
 component: ProgramPage
 public: true
 program_order: 2
-date: 2024-01-01
-schedule: martes 20:00 - ARG
-talent: ['Julio Quintana']
-social: ['@kingtanatv']
-logo: 4.png
+date: 2024-01-01T00:00:00.000Z
+schedule: 'martes 20:00 - ARG'
+talent:
+  - Julio Quintana
+social:
+  - '@kingtanatv'
+logo: checkpoint-1777569592180.jpg
 audio_source: checkpoint.mp3
 ---
 

@@ -26,6 +26,31 @@ interface AudioContextType {
   clearError: () => void;
 }
 
+const EXTERNAL_AUDIO_HOSTS = [
+  'archive.org',
+  'soundcloud.com',
+  'sndcdn.com',
+  'dropbox.com',
+  'dropboxusercontent.com',
+  'drive.google.com',
+  'googleusercontent.com',
+];
+
+const isExternalUrl = (url: string): boolean => /^https?:\/\//i.test(url);
+
+const isAllowedExternalAudioUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname.toLowerCase();
+    return EXTERNAL_AUDIO_HOSTS.some(
+      (allowedHost) => hostname === allowedHost || hostname.endsWith(`.${allowedHost}`)
+    );
+  } catch {
+    return false;
+  }
+};
+
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 /**
@@ -305,6 +330,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      setIsLoading(true);
       // Use safe play method with autoplay handling
       AudioService.safePlay(audioRef.current).then(result => {
         if (result.success) {
@@ -312,6 +338,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setCurrentSource('radio');
           setError(null); // Clear any previous errors on successful play
         } else {
+          setIsLoading(false);
           if (import.meta.env.DEV) {
             console.error('Radio playback failed:', result.error);
           }
@@ -342,17 +369,32 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsPlaying(false);
       setIsLoading(false);
     } else {
+      const shouldRestoreAudibleVolume = isMuted || volume === 0;
+      const restoredVolume = previousVolume > 0 ? previousVolume : 80;
+
+      // Ensure playback is audible when user explicitly presses play.
+      // This prevents a "playing but silent" state when volume was persisted as muted/0.
+      if (shouldRestoreAudibleVolume) {
+        setIsMuted(false);
+        setVolumeState(restoredVolume);
+      }
+
       // Clean up any existing radio audio
       if (audioRef.current) {
         safeCleanupAudio(audioRef.current);
       }
       audioRef.current = createConfiguredAudio();
+      setIsLoading(true);
+      if (shouldRestoreAudibleVolume) {
+        AudioService.setAudioVolume(audioRef.current, restoredVolume / 100);
+      }
       // Use safe play method with autoplay handling
       AudioService.safePlay(audioRef.current).then(result => {
         if (result.success) {
           setIsPlaying(true);
           setError(null); // Clear any previous errors on successful play
         } else {
+          setIsLoading(false);
           if (import.meta.env.DEV) {
             console.error('Radio playback failed:', result.error);
           }
@@ -366,7 +408,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     setCurrentSource('radio');
-  }, [isPlaying, currentSource, createConfiguredAudio, safeCleanupAudio]);
+  }, [isPlaying, currentSource, createConfiguredAudio, safeCleanupAudio, isMuted, volume, previousVolume]);
 
   /**
    * Program Audio Control - Following SRP
@@ -399,22 +441,32 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentProgramTitle(title);
 
     try {
-      // Validate audio URL with retry logic for better reliability
-      if (import.meta.env.DEV) {
-        console.log('Validating audio URL with retry logic...');
-      }
-      const validationResult: AudioValidationResult = await AudioService.validateAudioUrlWithRetry(audioUrl, 2, 1500);
-      
-      if (!validationResult.isValid) {
-        const errorMessage = validationResult.error || 'Audio file is not accessible or supported';
+      // External providers (Archive, SoundCloud, etc.) can fail preflight validation
+      // even when direct playback is valid. Only hard-validate local/same-origin assets.
+      if (!isExternalUrl(audioUrl)) {
         if (import.meta.env.DEV) {
-          console.error(`Audio validation failed: ${errorMessage} (Code: ${validationResult.errorCode})`);
+          console.log('Validating local audio URL with retry logic...');
         }
-        throw new Error(errorMessage);
-      }
-      
-      if (import.meta.env.DEV) {
-        console.log(`Audio validation successful. Duration: ${validationResult.duration || 'unknown'}s`);
+        const validationResult: AudioValidationResult = await AudioService.validateAudioUrlWithRetry(audioUrl, 2, 1500);
+
+        if (!validationResult.isValid) {
+          const errorMessage = validationResult.error || 'Audio file is not accessible or supported';
+          if (import.meta.env.DEV) {
+            console.error(`Audio validation failed: ${errorMessage} (Code: ${validationResult.errorCode})`);
+          }
+          throw new Error(errorMessage);
+        }
+
+        if (import.meta.env.DEV) {
+          console.log(`Audio validation successful. Duration: ${validationResult.duration || 'unknown'}s`);
+        }
+      } else {
+        if (!isAllowedExternalAudioUrl(audioUrl)) {
+          throw new Error('External audio host is not allowed.');
+        }
+        if (import.meta.env.DEV) {
+          console.log('Skipping strict pre-validation for allowed external audio URL:', audioUrl);
+        }
       }
 
       // Create new program audio instance with persisted volume settings

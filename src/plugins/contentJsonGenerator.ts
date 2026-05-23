@@ -45,6 +45,155 @@ function getIdFromFilename(filename: string): string {
 // Removed processAudioSource function - we'll handle URL conversion at runtime
 // to ensure Google Drive URLs stay fresh and don't expire
 
+export interface GenerateContentIndexOptions {
+  contentDir: string;
+  outputFile: string;
+  supportedLanguages: string[];
+  /** false = sin resumen en consola (p. ej. API del editor) */
+  verbose?: boolean;
+}
+
+/** Regenera contentIndex.json desde el markdown (misma lógica que el plugin de Vite). */
+export async function generateContentIndexFile(
+  options: GenerateContentIndexOptions
+): Promise<{ entryCount: number }> {
+  const { contentDir, outputFile, supportedLanguages, verbose = false } = options;
+  const content: ContentJson = {};
+  const errors: string[] = [];
+  const menuMap: Record<string, Record<string, { menu: string; menu_position: number; file: string }>> = {};
+  const langContentCount: Record<string, number> = {};
+
+  let pageComponents: string[] = [];
+  try {
+    pageComponents = readdirSync(path.resolve(process.cwd(), 'src/pages'))
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => f.replace(/\.[^.]+$/, ''));
+  } catch {
+    errors.push('Could not read src/pages for component validation.');
+  }
+
+  for (const lang of supportedLanguages) {
+    const langDir = path.join(contentDir, lang);
+    try {
+      const files = await getMarkdownFiles(langDir);
+      for (const file of files) {
+        const fileContent = await fs.readFile(file, 'utf-8');
+        const { data, content: mdBody } = matter(fileContent);
+
+        const alwaysRequired = ['title', 'slug', 'id', 'component', 'public', 'date', 'language'];
+        for (const field of alwaysRequired) {
+          if (typeof data[field] === 'undefined' || data[field] === '') {
+            errors.push(`[${lang}] ${file}: Missing required frontmatter field: ${field}`);
+          }
+        }
+
+        if (typeof data.menu !== 'undefined' && data.menu !== '') {
+          if (
+            typeof data.menu_position === 'undefined' ||
+            data.menu_position === '' ||
+            isNaN(Number(data.menu_position))
+          ) {
+            errors.push(`[${lang}] ${file}: menu_position is mandatory and must be a number if menu is set.`);
+          }
+        }
+
+        if (data.component && !pageComponents.includes(data.component)) {
+          errors.push(`[${lang}] ${file}: Component '${data.component}' does not exist in src/pages.`);
+        }
+
+        if (!menuMap[lang]) menuMap[lang] = {};
+        const isPublic = data.public === true || data.public === 'true';
+        if (
+          isPublic &&
+          typeof data.menu !== 'undefined' &&
+          data.menu !== '' &&
+          typeof data.menu_position !== 'undefined' &&
+          data.menu_position !== '' &&
+          !isNaN(Number(data.menu_position))
+        ) {
+          const menuKey = `${data.menu}|${data.menu_position}`;
+          if (menuMap[lang][menuKey]) {
+            errors.push(
+              `[${lang}] ${file}: Duplicate menu/menu_position ('${data.menu}', ${data.menu_position}) also in ${menuMap[lang][menuKey].file}`
+            );
+          } else {
+            menuMap[lang][menuKey] = { menu: data.menu, menu_position: data.menu_position, file };
+          }
+        }
+
+        if (!mdBody || !mdBody.trim()) {
+          errors.push(`[${lang}] ${file}: Markdown body is empty or invalid.`);
+        }
+
+        if (!(data.public === true || data.public === 'true')) continue;
+
+        const id = data.id || getIdFromFilename(file);
+        if (!content[id]) content[id] = {};
+
+        const relPath = path.relative(process.cwd(), file).replace(/^src\//, '/').replace(/^src\//, '/');
+        content[id][lang] = {
+          ...data,
+          title: data.title || '',
+          slug: data.slug || getIdFromFilename(file),
+          id,
+          component: data.component || '',
+          public: data.public,
+          date: data.date || '',
+          menu: data.menu || '',
+          menu_position:
+            typeof data.menu_position === 'number'
+              ? data.menu_position
+              : data.menu_position
+                ? Number(data.menu_position)
+                : undefined,
+          markdownfile: relPath.replace(/^\/src\//, '/content/'),
+          language: data.language || lang,
+          content: mdBody.trim(),
+        };
+        langContentCount[lang] = (langContentCount[lang] || 0) + 1;
+      }
+    } catch {
+      // Ignore missing language folders
+    }
+  }
+
+  const allIds = Object.keys(content);
+  const missingByLang: Record<string, string[]> = {};
+  for (const id of allIds) {
+    for (const lang of supportedLanguages) {
+      if (!content[id][lang]) {
+        if (!missingByLang[lang]) missingByLang[lang] = [];
+        missingByLang[lang].push(id);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error('\n\x1b[31mContent validation failed:\x1b[0m');
+    for (const err of errors) {
+      console.error('  -', err);
+    }
+    throw new Error('Content validation failed. See errors above.');
+  }
+
+  await fs.writeFile(outputFile, JSON.stringify(content, null, 2), 'utf-8');
+
+  if (verbose) {
+    console.log('\n\x1b[36mContent summary by language:\x1b[0m');
+    for (const lang of supportedLanguages) {
+      const count = langContentCount[lang] || 0;
+      console.log(`  - ${lang}: ${count} content item(s)`);
+    }
+    for (const lang of supportedLanguages) {
+      if (missingByLang[lang] && missingByLang[lang].length > 0) {
+        console.warn(`\x1b[33m[WARN]\x1b[0m Missing content for language '${lang}':`, missingByLang[lang].join(', '));
+      }
+    }
+  }
+
+  return { entryCount: Object.keys(content).length };
+}
+
 export function contentJsonGeneratorPlugin({
   contentDir,
   outputFile,
@@ -57,130 +206,13 @@ export function contentJsonGeneratorPlugin({
   return {
     name: 'content-json-generator',
     async buildStart() {
-      const content: ContentJson = {};
-      const errors: string[] = [];
-      const menuMap: Record<string, Record<string, { menu: string, menu_position: number, file: string }>> = {};
-      const langContentCount: Record<string, number> = {};
-
-      // Get all available page components (without extension)
-      let pageComponents: string[] = [];
-      try {
-        pageComponents = readdirSync(path.resolve(process.cwd(), 'src/pages'))
-          .filter(f => f.endsWith('.tsx'))
-          .map(f => f.replace(/\.[^.]+$/, ''));
-      } catch (e) {
-        errors.push('Could not read src/pages for component validation.');
-      }
-
-      for (const lang of supportedLanguages) {
-        const langDir = path.join(contentDir, lang);
-        try {
-          const files = await getMarkdownFiles(langDir);
-          for (const file of files) {
-            const fileContent = await fs.readFile(file, 'utf-8');
-            const { data, content: mdBody } = matter(fileContent);
-
-            // 1. Required fields (except markdownfile, which is computed)
-            const alwaysRequired = ['title', 'slug', 'id', 'component', 'public', 'date', 'language'];
-            for (const field of alwaysRequired) {
-              if (typeof data[field] === 'undefined' || data[field] === '') {
-                errors.push(`[${lang}] ${file}: Missing required frontmatter field: ${field}`);
-              }
-            }
-
-            // 1b. If menu is present, menu_position is mandatory
-            if (typeof data.menu !== 'undefined' && data.menu !== '') {
-              if (typeof data.menu_position === 'undefined' || data.menu_position === '' || isNaN(Number(data.menu_position))) {
-                errors.push(`[${lang}] ${file}: menu_position is mandatory and must be a number if menu is set.`);
-              }
-            }
-
-            // 2. The component must exist in src/pages
-            if (data.component && !pageComponents.includes(data.component)) {
-              errors.push(`[${lang}] ${file}: Component '${data.component}' does not exist in src/pages.`);
-            }
-
-            // 3. No duplicate menu/menu_position in same language (only if both are present and public is true)
-            if (!menuMap[lang]) menuMap[lang] = {};
-            const isPublic = data.public === true || data.public === 'true';
-            if (isPublic && typeof data.menu !== 'undefined' && data.menu !== '' && typeof data.menu_position !== 'undefined' && data.menu_position !== '' && !isNaN(Number(data.menu_position))) {
-              const menuKey = `${data.menu}|${data.menu_position}`;
-              if (menuMap[lang][menuKey]) {
-                errors.push(`[${lang}] ${file}: Duplicate menu/menu_position ('${data.menu}', ${data.menu_position}) also in ${menuMap[lang][menuKey].file}`);
-              } else {
-                menuMap[lang][menuKey] = { menu: data.menu, menu_position: data.menu_position, file };
-              }
-            }
-
-            // 4. Markdown body must be valid (non-empty)
-            if (!mdBody || !mdBody.trim()) {
-              errors.push(`[${lang}] ${file}: Markdown body is empty or invalid.`);
-            }
-
-            if (!(data.public === true || data.public === 'true')) continue;
-
-            const id = data.id || getIdFromFilename(file);
-            if (!content[id]) content[id] = {};
-
-            // Compute the markdown file path relative to the project root (starting from /content/...)
-            const relPath = path.relative(process.cwd(), file).replace(/^src\//, '/').replace(/^src\//, '/');
-            content[id][lang] = {
-              ...data, // include all frontmatter variables (required and extra) - keep original URLs
-              // Overwrite/ensure required fields are present and normalized
-              title: data.title || '',
-              slug: data.slug || getIdFromFilename(file),
-              id,
-              component: data.component || '',
-              public: data.public,
-              date: data.date || '',
-              menu: data.menu || '',
-              menu_position: typeof data.menu_position === 'number' ? data.menu_position : (data.menu_position ? Number(data.menu_position) : undefined),
-              markdownfile: relPath.replace(/^\/src\//, '/content/'),
-              language: data.language || lang,
-              // Include the markdown content at build time
-              content: mdBody.trim()
-            };
-            langContentCount[lang] = (langContentCount[lang] || 0) + 1;
-          }
-        } catch (err) {
-          // Ignore missing language folders
-        }
-      }
-
-      // 5. Check for missing content by language
-      const allIds = Object.keys(content);
-      const missingByLang: Record<string, string[]> = {};
-      for (const id of allIds) {
-        for (const lang of supportedLanguages) {
-          if (!content[id][lang]) {
-            if (!missingByLang[lang]) missingByLang[lang] = [];
-            missingByLang[lang].push(id);
-          }
-        }
-      }
-
-      if (errors.length > 0) {
-        // Print all errors and stop build
-        console.error('\n\x1b[31mContent validation failed:\x1b[0m');
-        for (const err of errors) {
-          console.error('  -', err);
-        }
-        throw new Error('Content validation failed. See errors above.');
-      }
-
-      await fs.writeFile(outputFile, JSON.stringify(content, null, 2), 'utf-8');
-      // Print summary
-      console.log('\n\x1b[36mContent summary by language:\x1b[0m');
-      for (const lang of supportedLanguages) {
-        const count = langContentCount[lang] || 0;
-        console.log(`  - ${lang}: ${count} content item(s)`);
-      }
-      for (const lang of supportedLanguages) {
-        if (missingByLang[lang] && missingByLang[lang].length > 0) {
-          console.warn(`\x1b[33m[WARN]\x1b[0m Missing content for language '${lang}':`, missingByLang[lang].join(', '));
-        }
-      }
-      this.info(`Generated contentIndex.json with ${Object.keys(content).length} entries.`);
+      const { entryCount } = await generateContentIndexFile({
+        contentDir,
+        outputFile,
+        supportedLanguages,
+        verbose: true,
+      });
+      this.info(`Generated contentIndex.json with ${entryCount} entries.`);
     },
   };
 }

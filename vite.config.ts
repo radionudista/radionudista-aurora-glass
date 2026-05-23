@@ -1,9 +1,9 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { multiLanguageBuild } from "./src/plugins/multiLanguageBuild";
 import { contentJsonGeneratorPlugin } from './src/plugins/contentJsonGenerator';
+import { editorDevServerPlugin } from './scripts/editorDevServerPlugin';
 // Removed unused import of env
 
 // https://vitejs.dev/config/
@@ -17,15 +17,16 @@ export default defineConfig(({ mode }) => {
     .map(l => l.trim())
     .filter(Boolean);
 
+  const editorEnabled = envVars.VITE_EDITOR_ENABLED === 'true';
+  const devServerHost = editorEnabled ? '127.0.0.1' : (envVars.VITE_DEV_SERVER_HOST || '127.0.0.1');
+
   return {
     server: {
-      host: "::",
+      host: devServerHost,
       port: 8080,
     },
     plugins: [
       react(),
-      mode === 'development' &&
-      componentTagger(),
       multiLanguageBuild({
         langDir: path.resolve(__dirname, 'src/lang'),
         defaultLang: 'en',
@@ -44,14 +45,28 @@ export default defineConfig(({ mode }) => {
           const dest = path.resolve(__dirname, 'public/contentIndex.json');
           try {
             await fs.copyFile(src, dest);
-            // eslint-disable-next-line no-console
             console.log('Copied contentIndex.json to public/');
           } catch (err) {
-            // eslint-disable-next-line no-console
             console.error('Failed to copy contentIndex.json to public/', err);
           }
         }
-      }
+      },
+      editorDevServerPlugin({
+        rootDir: __dirname,
+        enabled: mode === 'development' && editorEnabled,
+        editorToken: envVars.EDITOR_DEV_TOKEN,
+        supportedLanguages: Array.isArray(supportedLanguages) ? supportedLanguages : ['es', 'pt'],
+        archive: {
+          accessKey: envVars.IA_ACCESS_KEY,
+          secretKey: envVars.IA_SECRET_KEY,
+          collection: envVars.IA_COLLECTION,
+        },
+        translation: {
+          apiKey: envVars.TRANSLATE_API_KEY || envVars.GOOGLE_TRANSLATE_API_KEY,
+          endpointUrl: envVars.TRANSLATE_API_URL || envVars.GOOGLE_TRANSLATE_API_URL,
+          monthlyCharLimit: Number(envVars.EDITOR_TRANSLATE_MONTHLY_CHAR_LIMIT || 500000),
+        },
+      }),
     ].filter(Boolean),
     resolve: {
       alias: {

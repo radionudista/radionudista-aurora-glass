@@ -23,6 +23,20 @@ export interface EnvConfig {
   DEV_LAUNCHING_SECONDS: number;
   SUPPORTED_LANGUAGES: string[];
   DEFAULT_LANGUAGE: string;
+  GTRANSLATE_ENABLED: boolean;
+  GTRANSLATE_DEFAULT_LANGUAGE: string;
+  GTRANSLATE_LANGUAGES: string[];
+  EDITOR_ENABLED: boolean;
+  CALENDAR_CONFIG_DATA: {
+    apiKey: string;
+    calendarId: string;
+    timezone: string;
+    maxResults: number;
+    config: {
+      singleEvents: boolean;
+      orderBy: string;
+    };
+  } | null;
 }
 
 /**
@@ -73,8 +87,36 @@ export const env: EnvConfig = {
   RADIO_STATUS_POLL_INTERVAL: getEnvNumber('RADIO_STATUS_POLL_INTERVAL', 10000),
   TWITCH_PLAYER_WINDOW_SIZE_PERCENT: getEnvNumber('TWITCH_PLAYER_WINDOW_SIZE_PERCENT', 70),
   DEV_LAUNCHING_SECONDS: getEnvNumber('DEV_LAUNCHING_SECONDS', -1),
-  SUPPORTED_LANGUAGES: getEnvVar('SUPPORTED_LANGUAGES', 'es,pt').split(','),
+  SUPPORTED_LANGUAGES: getEnvVar('SUPPORTED_LANGUAGES', 'es,pt,en').split(','),
   DEFAULT_LANGUAGE: getEnvVar('DEFAULT_LANGUAGE', 'es'),
+  GTRANSLATE_ENABLED: getEnvBoolean('GTRANSLATE_ENABLED', true),
+  GTRANSLATE_DEFAULT_LANGUAGE: getEnvVar('GTRANSLATE_DEFAULT_LANGUAGE', 'es'),
+  GTRANSLATE_LANGUAGES: getEnvVar('GTRANSLATE_LANGUAGES', 'es,pt,en').split(','),
+  EDITOR_ENABLED: getEnvBoolean('EDITOR_ENABLED', false),
+  CALENDAR_CONFIG_DATA: (() => {
+    try {
+      const apiKey = getEnvVar('CALENDAR_API_KEY', '').trim();
+      const calendarId = getEnvVar('CALENDAR_ID', '').trim();
+      if (apiKey && calendarId) {
+        return {
+          apiKey,
+          calendarId,
+          timezone: getEnvVar('CALENDAR_TIMEZONE', 'America/Argentina/Buenos_Aires'),
+          maxResults: getEnvNumber('CALENDAR_MAX_RESULTS', 2500),
+          config: {
+            singleEvents: getEnvBoolean('CALENDAR_SINGLE_EVENTS', true),
+            orderBy: getEnvVar('CALENDAR_ORDER_BY', 'startTime'),
+          },
+        };
+      }
+
+      const raw = getEnvVar('CALENDAR_CONFIG_DATA', '').trim();
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.warn('Failed to parse VITE_CALENDAR_CONFIG_DATA');
+      return null;
+    }
+  })(),
 };
 
 /**

@@ -36,14 +36,14 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
     height: isMobile ? buttonSize * 0.8 : buttonSize * 0.6
   };
 
-  if (!isPlaying) {
+  if (isLoading || !isPlaying) {
     return (
       <div
         className="flex items-center justify-center md:justify-start"
         style={containerStyle}
       >
         <MediaButton
-          isPlaying={false}
+          isPlaying={isPlaying}
           isLoading={isLoading}
           onClick={onTogglePlay}
           size={isMobile ? (size === 'large' ? 'medium' : 'small') : size}
