@@ -2,11 +2,11 @@ name: Validate Frontmatter
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, dev ]
     paths:
       - 'src/content/**/*.md'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master ]
     paths:
       - 'src/content/**/*.md'
 

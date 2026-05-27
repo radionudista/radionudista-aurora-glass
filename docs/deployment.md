@@ -61,6 +61,24 @@ Upload the contents of `dist/` to your static host.
 3. Add all required `VITE_` environment variables.
 4. Deploy. Your site will be live at `https://your-project.pages.dev` or your custom domain.
 
+## Editor Auto-Publish to Production (`dev` -> `master`)
+
+To let editors publish without manual PR handling:
+
+1. Run the editor host on branch `dev` with:
+   - `VITE_EDITOR_ENABLED=true`
+   - `EDITOR_GIT_BRANCH=dev`
+   - `EDITOR_GITHUB_TOKEN=<PAT with repo write>`
+2. Add repository secret `EDITOR_GITHUB_TOKEN` for GitHub Actions (same PAT or bot PAT).
+3. Keep branch rules for `master` active, but ensure the token owner can bypass PR approval
+   requirements (admin/bypass actor), so auto-merge can complete once checks are green.
+
+Behavior:
+- Editor publishes to `dev`
+- Actions open/update PR `dev` -> `master`
+- `Validate Frontmatter` + `Build` run
+- PR auto-merges only if checks pass
+
 ---
 For more, see [Usage & Build](./usage.md) and [Environment Variables](./environment-variables.md).
 ## Example: Deploying to Vercel

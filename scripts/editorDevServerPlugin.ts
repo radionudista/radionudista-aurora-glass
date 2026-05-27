@@ -837,7 +837,7 @@ export const editorDevServerPlugin = ({
         }
 
         const remote = process.env.EDITOR_GIT_REMOTE || 'origin';
-        const branch = process.env.EDITOR_GIT_BRANCH || 'main';
+        const branch = process.env.EDITOR_GIT_BRANCH || 'dev';
         const token = process.env.EDITOR_GITHUB_TOKEN || '';
         if (!token) {
           return sendJson(res, 400, { ok: false, message: 'Falta EDITOR_GITHUB_TOKEN en entorno.' });
