@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LanguageRouter from "./components/LanguageRouter";
-import GTranslateWidget from "./components/GTranslateWidget";
 import { DebugProvider } from "./contexts/DebugContext";
 import { useLanguageDebugInfo } from "@/hooks/useLanguageDebugInfo";
 import { HelmetProvider } from 'react-helmet-async';
@@ -28,7 +27,6 @@ const App = () => {
             <LanguageDebugInfoProvider /> {/* Now inside DebugProvider */}
             <Toaster />
             <Sonner />
-            <GTranslateWidget />
             <LanguageRouter />
             {/* Hidden by request: keep debug data plumbing, but do not render bottom debug UI. */}
           </DebugProvider>
