@@ -5,7 +5,8 @@ import { Search } from 'lucide-react';
 import { env } from '../config/env';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import { useContentIndexData } from '../hooks/useEditorContent';
-import { mapUiLanguageToContentLanguage } from '../utils/contentLanguage';
+import { mapRouteToContentIndexLanguage, resolveContentIndexEntry, resolveContentIndexString } from '../utils/contentLanguage';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
 import {
   Dialog,
   DialogContent,
@@ -63,22 +64,24 @@ const ProgramPage: React.FC = () => {
   const [newTitlePt, setNewTitlePt] = useState('');
   const [newSchedule, setNewSchedule] = useState('');
 
-  const currentLang = useMemo(() => {
-    const parts = location.pathname.split('/').filter(Boolean);
-    if (parts.length > 0 && env.SUPPORTED_LANGUAGES.includes(parts[0])) return parts[0];
-    return env.SUPPORTED_LANGUAGES[0];
-  }, [location.pathname]);
-  const contentLang = mapUiLanguageToContentLanguage(currentLang);
+  const routeLang = useRouteLanguage();
+  const contentLang = mapRouteToContentIndexLanguage(routeLang);
 
   const allShows = useMemo(() => {
-    return Object.values(contentIndex)
-      .map((entry) => entry[contentLang] as ShowData | undefined)
-      .filter(Boolean)
-      .filter((entry) => entry.component === 'ProgramPage' && (entry.public === true || entry.public === 'true'))
-      .map((entry) => ({
-        ...entry,
-        content: entry.content || '',
-      }));
+    return Object.entries(contentIndex)
+      .map(([key, localized]) => {
+        const entry = resolveContentIndexEntry<ShowData>(localized, contentLang);
+        if (!entry || entry.component !== 'ProgramPage' || (entry.public !== true && entry.public !== 'true')) {
+          return null;
+        }
+        return {
+          ...entry,
+          id: entry.id || key,
+          title: resolveContentIndexString(localized, contentLang, 'title') || entry.title,
+          content: resolveContentIndexString(localized, contentLang, 'content') || entry.content || '',
+        };
+      })
+      .filter((entry): entry is ShowData => entry !== null);
   }, [contentIndex, contentLang]);
 
   const orderedShows = useMemo(() => {
@@ -126,7 +129,7 @@ const ProgramPage: React.FC = () => {
       setNewTitleEs('');
       setNewTitlePt('');
       setNewSchedule('');
-      void navigate(`/${currentLang}/programacion/${encodeURIComponent(createdId)}`);
+      void navigate(`/${routeLang}/programacion/${encodeURIComponent(createdId)}`);
     }
   };
 
@@ -180,7 +183,7 @@ const ProgramPage: React.FC = () => {
           return (
             <article key={show.id} className="group">
               <Link
-                to={`/${currentLang}/programacion/${show.id}`}
+                to={`/${routeLang}/programacion/${show.id}`}
                 className="block overflow-hidden border border-white/20 bg-black"
               >
                 <div className="aspect-[4/3] overflow-hidden bg-[#0a0a0a]">
@@ -194,7 +197,7 @@ const ProgramPage: React.FC = () => {
 
               <div className="pt-3">
                 <Link
-                  to={`/${currentLang}/programacion/${show.id}`}
+                  to={`/${routeLang}/programacion/${show.id}`}
                   className="block font-['Space_Grotesk'] text-2xl font-bold uppercase leading-[0.95] tracking-tighter text-white transition hover:underline xl:text-[1.65rem] xl:leading-tight"
                 >
                   {show.title}

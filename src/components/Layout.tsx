@@ -22,7 +22,7 @@ const Layout = ({ children }: LayoutProps) => {
         {children}
       </main>
 
-      <footer className="bg-black w-full py-12 px-6 flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/10">
+      <footer className="relative z-20 shrink-0 bg-black w-full py-12 px-6 flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/10">
         <div className="text-lg font-bold text-white font-['Space_Grotesk'] tracking-tighter uppercase">
           © Radionudista
         </div>

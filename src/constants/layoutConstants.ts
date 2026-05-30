@@ -64,7 +64,7 @@ export const PAGE_SCREEN_TITLE_CLASS =
  * Keeps route titles aligned between Archivos (programación) and Schedule.
  */
 export const PAGE_SHELL_BELOW_NAV =
-  'min-h-screen bg-black px-3 pb-16 pt-24 text-white md:px-6';
+  'bg-black px-3 pb-16 pt-24 text-white md:px-6';
 
 /** Centered content column used by list-style pages (matches max width across routes). */
 export const PAGE_SHELL_CONTENT = 'mx-auto w-full max-w-[1700px]';

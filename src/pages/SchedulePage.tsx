@@ -179,7 +179,7 @@ const SchedulePage: React.FC = () => {
                 }
             `}} />
 
-            <div className="fixed inset-0 bg-black z-[1] pointer-events-none" />
+            <div className="absolute inset-0 bg-black z-0 pointer-events-none" />
 
             <main className={`relative z-10 ${PAGE_SHELL_BELOW_NAV}`}>
                 {/* Calendar Header */}

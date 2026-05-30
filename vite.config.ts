@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
       editorDevServerPlugin({
         rootDir: __dirname,
         enabled: mode === 'development' && editorEnabled,
-        editorToken: envVars.EDITOR_DEV_TOKEN,
+        passwordHash: envVars.VITE_EDITOR_PASSWORD_HASH,
         supportedLanguages: Array.isArray(supportedLanguages) ? supportedLanguages : ['es', 'pt'],
         archive: {
           accessKey: envVars.IA_ACCESS_KEY,

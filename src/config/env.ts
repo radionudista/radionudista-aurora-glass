@@ -23,10 +23,9 @@ export interface EnvConfig {
   DEV_LAUNCHING_SECONDS: number;
   SUPPORTED_LANGUAGES: string[];
   DEFAULT_LANGUAGE: string;
-  GTRANSLATE_ENABLED: boolean;
-  GTRANSLATE_DEFAULT_LANGUAGE: string;
-  GTRANSLATE_LANGUAGES: string[];
   EDITOR_ENABLED: boolean;
+  EDITOR_SALT: string;
+  EDITOR_PASSWORD_HASH: string;
   CALENDAR_CONFIG_DATA: {
     apiKey: string;
     calendarId: string;
@@ -89,10 +88,9 @@ export const env: EnvConfig = {
   DEV_LAUNCHING_SECONDS: getEnvNumber('DEV_LAUNCHING_SECONDS', -1),
   SUPPORTED_LANGUAGES: getEnvVar('SUPPORTED_LANGUAGES', 'es,pt,en').split(','),
   DEFAULT_LANGUAGE: getEnvVar('DEFAULT_LANGUAGE', 'es'),
-  GTRANSLATE_ENABLED: getEnvBoolean('GTRANSLATE_ENABLED', true),
-  GTRANSLATE_DEFAULT_LANGUAGE: getEnvVar('GTRANSLATE_DEFAULT_LANGUAGE', 'es'),
-  GTRANSLATE_LANGUAGES: getEnvVar('GTRANSLATE_LANGUAGES', 'es,pt,en').split(','),
   EDITOR_ENABLED: getEnvBoolean('EDITOR_ENABLED', false),
+  EDITOR_SALT: getEnvVar('EDITOR_SALT', ''),
+  EDITOR_PASSWORD_HASH: getEnvVar('EDITOR_PASSWORD_HASH', ''),
   CALENDAR_CONFIG_DATA: (() => {
     try {
       const apiKey = getEnvVar('CALENDAR_API_KEY', '').trim();

@@ -3,55 +3,55 @@
     "manifestTitle": {
       "es": "Sacándole el envoltorio a la cultura",
       "pt": "Tirando o embrulho da cultura",
-      "en": "Sacándole el envoltorio a la cultura"
+      "en": ""
     },
     "manifestSubtitle": {
       "es": "Sube el volumen, baja el juicio.",
       "pt": "Aumenta o volume, diminui o julgamento.",
-      "en": "Sube el volumen, baja el juicio."
+      "en": ""
     },
     "joinPanelCopy": {
       "es": "Si tienes una idea rara, sensible o explosiva, este es tu lugar. Queremos nuevas voces, nuevas curadurias y propuestas que muevan la aguja.",
       "pt": "Se voce tem uma ideia estranha, sensivel ou explosiva, este e o seu lugar. Queremos novas vozes, novas curadorias e propostas que mexam a agulha.",
-      "en": "Si tienes una idea rara, sensible o explosiva, este es tu lugar. Queremos nuevas voces, nuevas curadurias y propuestas que muevan la aguja."
+      "en": ""
     }
   },
   "about": {
     "heroTitle": {
       "es": "NOSOTRXS",
       "pt": "NOS",
-      "en": "NOSOTRXS"
+      "en": ""
     },
     "lead": {
       "es": "radionudista es un club social experimental diseñado para la transmisión de frecuencias no convencionales y el encuentro de estéticas periféricas.",
       "pt": "radionudista e um clube social experimental criado para transmitir frequencias nao convencionais e aproximar esteticas perifericas.",
-      "en": "radionudista es un club social experimental diseñado para la transmisión de frecuencias no convencionales y el encuentro de estéticas periféricas."
+      "en": ""
     },
     "paragraph1": {
       "es": "Nacimos en la grieta entre lo digital y lo físico, operando como una plataforma de difusión para artistas, selectores y pensadores que habitan los márgenes del mainstream cultural. Nuestra señal no es solo sonido; es un manifiesto visual y táctil que se manifiesta en cada píxel y cada onda sonora.",
       "pt": "Nascemos na fenda entre o digital e o fisico, operando como plataforma de difusao para artistas, curadores e pensadores que habitam as margens do mainstream cultural. Nosso sinal nao e apenas som; e um manifesto visual e tatil presente em cada pixel e em cada onda sonora.",
-      "en": "Nacimos en la grieta entre lo digital y lo físico, operando como una plataforma de difusión para artistas, selectores y pensadores que habitan los márgenes del mainstream cultural. Nuestra señal no es solo sonido; es un manifiesto visual y táctil que se manifiesta en cada píxel y cada onda sonora."
+      "en": ""
     },
     "paragraph2": {
       "es": "Entendemos la radio como un espacio de resistencia y juego. No buscamos la perfección del estudio clínico, sino la verdad de la interferencia, el glitch y la conexión humana cruda. Radionudista es, ante todo, un refugio para la curiosidad sin filtros.",
       "pt": "Entendemos o radio como espaco de resistencia e jogo. Nao buscamos a perfeicao de estudio clinico, e sim a verdade da interferencia, do glitch e da conexao humana crua. Radionudista e, acima de tudo, um refugio para a curiosidade sem filtros.",
-      "en": "Entendemos la radio como un espacio de resistencia y juego. No buscamos la perfección del estudio clínico, sino la verdad de la interferencia, el glitch y la conexión humana cruda. Radionudista es, ante todo, un refugio para la curiosidad sin filtros."
+      "en": ""
     },
     "credits": {
       "heading": {
         "es": "Créditos",
         "pt": "Créditos",
-        "en": "Créditos"
+        "en": ""
       },
       "subheading": {
         "es": "Producción real / radionudista",
         "pt": "Produção real / radionudista",
-        "en": "Producción real / radionudista"
+        "en": ""
       },
       "collaboratorsHeading": {
         "es": "Red de colaboradores",
         "pt": "Rede de colaboradores",
-        "en": "Red de colaboradores"
+        "en": ""
       },
       "groups": [
         {
@@ -59,7 +59,7 @@
           "title": {
             "es": "Curaduría musical",
             "pt": "Curadoria musical",
-            "en": "Curaduría musical"
+            "en": ""
           },
           "people": [
             "Gustavo Perez (@gustavodesnudo)",
@@ -71,14 +71,13 @@
           "title": {
             "es": "Diseño web",
             "pt": "Design web",
-            "en": "Diseño web"
+            "en": ""
           },
           "people": [
             "Felipe Laboren (@felipelabo)",
             "Lemys Lopez (@lemysKaman)",
             "Benjamin Ochoa (@benjaminochoag)",
-            "Nicolas Fuentes (@ArcAegis)",
-            "Prueba1"
+            "Nicolas Fuentes (@ArcAegis)"
           ]
         },
         {
@@ -86,7 +85,7 @@
           "title": {
             "es": "Diseño de audio",
             "pt": "Design de áudio",
-            "en": "Diseño de audio"
+            "en": ""
           },
           "people": [
             "Manuel Aular (@hardlinemanu)"
@@ -97,7 +96,7 @@
           "title": {
             "es": "Visuales",
             "pt": "Visuais",
-            "en": "Visuales"
+            "en": ""
           },
           "people": [
             "Andres Ramírez (@Gachapon3000)"
@@ -108,7 +107,7 @@
           "title": {
             "es": "Voiceovers",
             "pt": "Voiceovers",
-            "en": "Voiceovers"
+            "en": ""
           },
           "people": [
             "Diana Hung",
@@ -148,7 +147,7 @@
       "collaboratorsNote": {
         "es": "Esta radio suena gracias a esta red viva de colaboradores alrededor del mundo.",
         "pt": "Este rádio soa graças a esta rede viva de colaboradores ao redor do mundo.",
-        "en": "Esta radio suena gracias a esta red viva de colaboradores alrededor del mundo."
+        "en": ""
       }
     }
   },
@@ -156,12 +155,12 @@
     "pageTitle": {
       "es": "Ponte en Contacto",
       "pt": "Entre em Contato",
-      "en": "Ponte en Contacto"
+      "en": ""
     },
     "pageSubtitle": {
       "es": "Nos encantaría saber de ti",
       "pt": "Adoraríamos saber de voce",
-      "en": "Nos encantaría saber de ti"
+      "en": ""
     }
   }
 }

@@ -7,6 +7,8 @@ import { episodeService } from '../services/episodeService';
 import type { ResolvedLiveProgram } from '../utils/liveSchedule';
 import { getNextVideoFromCycle, VIDEO_CONFIG } from '../utils/videoConfig';
 import { useEditorialText } from '../hooks/useEditorContent';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
+import { resolveEditorialText } from '../utils/editorialText';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import { useArchivePlayer } from '../contexts/ArchivePlayerContext';
 import InlineEditableText from '../components/InlineEditableText';
@@ -27,7 +29,7 @@ const HomePage = () => {
   const editorial = useEditorialText();
   const editor = useOptionalEditor();
   const archivePlayer = useArchivePlayer();
-  const lang = i18n.language === 'pt' ? 'pt' : i18n.language === 'en' ? 'en' : 'es';
+  const lang = useRouteLanguage();
   const { program, heroImageUrl, isLive, isLoading, isError, pastPrograms } = useLiveProgram();
   const [isJoinPanelOpen, setIsJoinPanelOpen] = React.useState(false);
   const [isMailChoiceOpen, setIsMailChoiceOpen] = React.useState(false);
@@ -338,7 +340,7 @@ const HomePage = () => {
                 align="center"
                 className="mt-4 max-w-4xl"
                 textClassName="font-['Space_Grotesk'] text-3xl font-black uppercase leading-[0.95] tracking-tight text-white md:text-5xl"
-                value={editorial?.home.manifestTitle[lang] ?? t('home.manifest-title')}
+                value={resolveEditorialText(editorial?.home.manifestTitle, lang)}
                 language={lang}
                 localizedValues={editorial?.home.manifestTitle}
                 onCommit={(next) => editor.commitEditorialField('home', 'manifestTitle', lang, next)}
@@ -348,7 +350,7 @@ const HomePage = () => {
               />
             ) : (
               <h3 className="mt-4 max-w-4xl font-['Space_Grotesk'] text-3xl font-black uppercase leading-[0.95] tracking-tight text-white md:text-5xl">
-                {editorial?.home.manifestTitle[lang] ?? t('home.manifest-title')}
+                {resolveEditorialText(editorial?.home.manifestTitle, lang)}
               </h3>
             )}
             {editor?.enabled ? (
@@ -357,7 +359,7 @@ const HomePage = () => {
                 className="mt-5 max-w-2xl"
                 align="center"
                 textClassName="font-['Space_Grotesk'] text-sm uppercase tracking-[0.14em] text-white/75 md:text-base"
-                value={editorial?.home.manifestSubtitle[lang] ?? t('home.manifest-subtitle')}
+                value={resolveEditorialText(editorial?.home.manifestSubtitle, lang)}
                 language={lang}
                 localizedValues={editorial?.home.manifestSubtitle}
                 onCommit={(next) => editor.commitEditorialField('home', 'manifestSubtitle', lang, next)}
@@ -367,7 +369,7 @@ const HomePage = () => {
               />
             ) : (
               <p className="mt-5 max-w-2xl font-['Space_Grotesk'] text-sm uppercase tracking-[0.14em] text-white/75 md:text-base">
-                {editorial?.home.manifestSubtitle[lang] ?? t('home.manifest-subtitle')}
+                {resolveEditorialText(editorial?.home.manifestSubtitle, lang)}
               </p>
             )}
             <button
@@ -418,7 +420,7 @@ const HomePage = () => {
                   <InlineEditableText
                     multiline
                     textClassName="font-['Space_Grotesk'] text-sm leading-relaxed text-white/80"
-                    value={editorial?.home.joinPanelCopy[lang] ?? t('home.join-panel-copy')}
+                    value={resolveEditorialText(editorial?.home.joinPanelCopy, lang)}
                     language={lang}
                     localizedValues={editorial?.home.joinPanelCopy}
                     onCommit={(next) => editor.commitEditorialField('home', 'joinPanelCopy', lang, next)}
@@ -429,7 +431,7 @@ const HomePage = () => {
                 </div>
               ) : (
                 <p className="mt-5 font-['Space_Grotesk'] text-sm leading-relaxed text-white/80">
-                  {editorial?.home.joinPanelCopy[lang] ?? t('home.join-panel-copy')}
+                  {resolveEditorialText(editorial?.home.joinPanelCopy, lang)}
                 </p>
               )}
 

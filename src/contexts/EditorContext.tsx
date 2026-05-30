@@ -19,6 +19,7 @@ import {
   type DeleteProgramPayload,
   type SavePayload,
 } from '../services/devEditorService';
+import { editorAuth, hashPassword } from '../utils/editorAuth';
 
 const fallbackEditorial: EditorialData = {
   home: {
@@ -166,8 +167,10 @@ const ensureLanguageEntry = (
 };
 
 export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const enabled = import.meta.env.DEV && env.APP_ENVIRONMENT === 'local' && env.EDITOR_ENABLED;
-  const [authenticated, setAuthenticated] = React.useState(() => enabled && devEditorAuth.hasToken());
+  // Editor disponible en local (Vite plugin) y en prod (Cloudflare Functions + GitHub API).
+  const enabled =
+    env.EDITOR_ENABLED && Boolean(env.EDITOR_PASSWORD_HASH.trim() && env.EDITOR_SALT.trim());
+  const [authenticated, setAuthenticated] = React.useState(() => enabled && editorAuth.hasSession());
   const active = enabled && authenticated;
   const [loading, setLoading] = React.useState(active);
   const [saving, setSaving] = React.useState(false);
@@ -186,47 +189,42 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return [...episodes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, []);
 
-  React.useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7560/ingest/5ccebaa5-f0e4-4ced-b6b7-3a14221eeaa6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153f83' },
-      body: JSON.stringify({
-        sessionId: '153f83',
-        runId: 'pre-fix',
-        hypothesisId: 'H1',
-        location: 'src/contexts/EditorContext.tsx:168',
-        message: 'Editor gating flags evaluated',
-        data: {
-          importMetaDev: import.meta.env.DEV,
-          appEnvironment: env.APP_ENVIRONMENT,
-          editorEnabledEnv: env.EDITOR_ENABLED,
-          enabled,
-          authenticated,
-          active,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [enabled, authenticated, active]);
-
   const auth = React.useCallback(async (password: string) => {
-    const token = password.trim();
-    if (!token) {
-      throw new Error('Falta el token del editor dev.');
+    const isValid = await editorAuth.validatePassword(password, env.EDITOR_PASSWORD_HASH, env.EDITOR_SALT);
+    if (!isValid) {
+      throw new Error('Contrase\u00f1a inv\u00e1lida.');
     }
-
-    devEditorAuth.setToken(token);
-    await devEditorService.getStatus();
+    editorAuth.createSession();
+    const apiToken = await hashPassword(password, env.EDITOR_SALT);
+    devEditorAuth.setToken(apiToken);
+    try {
+      await devEditorService.getStatus();
+    } catch {
+      // Dev server may not be available (production / serverless)
+    }
     setAuthenticated(true);
-    setMessage('Editor dev autenticado.');
+    setMessage('Modo editor activado.');
   }, []);
 
   const logout = React.useCallback(() => {
+    editorAuth.clearSession();
     devEditorAuth.clearToken();
     setAuthenticated(false);
-    setMessage('Editor dev bloqueado.');
+    setMessage('Modo editor desactivado.');
+  }, []);
+
+  React.useEffect(() => {
+    const loadEditorial = async () => {
+      try {
+        const editorialData = await devEditorService.fetchEditorial();
+        setEditorial(editorialData);
+        setBaseEditorial(clone(editorialData));
+      } catch {
+        // Keep bundled initialEditorial on fetch failure
+      }
+    };
+
+    void loadEditorial();
   }, []);
 
   React.useEffect(() => {
@@ -264,20 +262,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     void loadInitialData();
   }, [authenticated, enabled]);
-
-  React.useEffect(() => {
-    if (!enabled || authenticated) return;
-    const token = window.prompt('Token del editor dev');
-    if (!token) {
-      setMessage('Editor dev bloqueado: falta token.');
-      return;
-    }
-    void auth(token).catch((error) => {
-      devEditorAuth.clearToken();
-      setAuthenticated(false);
-      setMessage(error instanceof Error ? error.message : 'Token del editor dev inválido.');
-    });
-  }, [auth, authenticated, enabled]);
 
   const touchFile = (filePath: string) => {
     setDirtyFiles((prev) => {
@@ -701,25 +685,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const commitAboutCredits = async (nextCredits: AboutCreditsData) => {
     const nextEditorial = clone(editorial);
     nextEditorial.about = { ...nextEditorial.about, credits: nextCredits };
-    // #region agent log
-    fetch('http://127.0.0.1:7560/ingest/5ccebaa5-f0e4-4ced-b6b7-3a14221eeaa6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153f83' },
-      body: JSON.stringify({
-        sessionId: '153f83',
-        runId: 'pre-fix',
-        hypothesisId: 'H5',
-        location: 'src/contexts/EditorContext.tsx:604',
-        message: 'commitAboutCredits invoked',
-        data: {
-          active,
-          groupsCount: nextCredits.groups.length,
-          webDesignCount: nextCredits.groups.find((group) => group.id === 'web_design')?.people.length ?? 0,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setEditorial(nextEditorial);
     const response = await devEditorService.save({ editorial: nextEditorial });
     setBaseEditorial(clone(nextEditorial));

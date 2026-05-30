@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import BackgroundVideo from './BackgroundVideo';
 import Logo from './Logo';
 import { FormContainer, FormField, FormInput, FormButton } from './ui/FormComponents';
 
@@ -24,10 +23,7 @@ const PasswordProtection = ({ onCorrectPassword }: PasswordProtectionProps) => {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-hidden relative">
-      <BackgroundVideo overlayOpacity={0.5} />
-      
-      {/* Main Content */}
+    <div className="min-h-screen w-full overflow-hidden relative bg-black">
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
         {/* Logo */}
         <Logo size="large" className="mb-12" />
