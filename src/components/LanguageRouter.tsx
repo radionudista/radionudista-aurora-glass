@@ -16,6 +16,7 @@ import TwitchOnlyPlayerPage from '@/pages/TwitchOnlyPlayerPage';
 import SchedulePage from '../pages/SchedulePage';
 import ProgramDetailPage from '../pages/ProgramDetailPage';
 import EpisodeDetailPage from '../pages/EpisodeDetailPage';
+import EditorLoginPage from '../pages/EditorLoginPage';
 
 /**
  * Language Router Component
@@ -29,7 +30,7 @@ import EpisodeDetailPage from '../pages/EpisodeDetailPage';
  *
  * Features:
  * - Automatic browser language detection
- * - Subdirectory-based language routing (/es, /pt)
+ * - Subdirectory-based language routing (/{lang} — es, en, pt)
  * - Fallback to default language
  * - SEO-friendly URL structure
  */
@@ -116,6 +117,9 @@ const AppRoutes: React.FC = () => {
           <Route path=":slug" element={<DynamicSimplePageWrapper lang={lang} />} />
         </Route>
       ))}
+      {/* Editor login route */}
+      <Route path="/editor-login" element={<EditorLoginPage />} />
+
       {/* Catch-all route for 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -176,6 +176,22 @@ export async function generateContentIndexFile(
     throw new Error('Content validation failed. See errors above.');
   }
 
+  // Preserve editor-only en entries (no src/content/en markdown source).
+  let existingContent: ContentJson = {};
+  try {
+    const raw = await fs.readFile(outputFile, 'utf-8');
+    existingContent = JSON.parse(raw) as ContentJson;
+  } catch {
+    // First run or missing file — nothing to merge.
+  }
+
+  for (const id of Object.keys(content)) {
+    const existingEn = existingContent[id]?.en;
+    if (existingEn) {
+      content[id].en = existingEn;
+    }
+  }
+
   await fs.writeFile(outputFile, JSON.stringify(content, null, 2), 'utf-8');
 
   if (verbose) {

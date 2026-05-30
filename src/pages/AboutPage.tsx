@@ -1,45 +1,19 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { PAGE_SCREEN_TITLE_CLASS } from '../constants/layoutConstants';
-import { useTranslation } from 'react-i18next';
 import { defaultAboutCredits, type AboutCreditsData } from '../editor/contracts';
 import { useEditorialText } from '../hooks/useEditorContent';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
+import { resolveEditorialText } from '../utils/editorialText';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import EditableStringListItem from '../components/EditableStringListItem';
 import InlineEditableText from '../components/InlineEditableText';
 
 const AboutPage: React.FC = () => {
-  const { i18n } = useTranslation();
   const editorial = useEditorialText();
   const editor = useOptionalEditor();
-  const lang = i18n.language === 'pt' ? 'pt' : i18n.language === 'en' ? 'en' : 'es';
+  const lang = useRouteLanguage();
   const credits: AboutCreditsData = editorial?.about.credits ?? defaultAboutCredits;
-
-  React.useEffect(() => {
-    const webDesignGroup = credits.groups.find((group) => group.id === 'web_design');
-    // #region agent log
-    fetch('http://127.0.0.1:7560/ingest/5ccebaa5-f0e4-4ced-b6b7-3a14221eeaa6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153f83' },
-      body: JSON.stringify({
-        sessionId: '153f83',
-        runId: 'pre-fix',
-        hypothesisId: 'H2',
-        location: 'src/pages/AboutPage.tsx:20',
-        message: 'About credits source and web_design values',
-        data: {
-          lang,
-          hasEditorial: Boolean(editorial),
-          hasEditorContext: Boolean(editor),
-          source: editorial?.about.credits ? 'editorial' : 'defaultAboutCredits',
-          webDesignCount: webDesignGroup?.people.length ?? 0,
-          webDesignPeople: webDesignGroup?.people ?? [],
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [credits, editorial, editor, lang]);
 
   const commitCredits = (next: AboutCreditsData) => {
     if (editor?.enabled) void editor.commitAboutCredits(next);
@@ -57,10 +31,10 @@ const AboutPage: React.FC = () => {
   };
 
   return (
-    <div className="relative bg-[#000000] text-[#e2e2e2] font-['Inter'] selection:bg-white selection:text-[#1a1c1c] min-h-screen pt-24 pb-12">
-      <div className="fixed inset-0 bg-[#0a0a0b] z-[1] pointer-events-none" />
+    <div className="relative bg-[#000000] text-[#e2e2e2] font-['Inter'] selection:bg-white selection:text-[#1a1c1c] min-h-full pt-24 pb-12">
+      <div className="absolute inset-0 bg-[#0a0a0b] z-0 pointer-events-none" />
 
-      <main className="relative z-10 pt-4 px-6 overflow-hidden min-h-screen max-w-[1720px] mx-auto">
+      <main className="relative z-10 pt-4 px-6 max-w-[1720px] mx-auto">
         {/* Editorial Content Container */}
         <article className="max-w-[44rem] mx-auto relative z-10">
           
@@ -72,7 +46,7 @@ const AboutPage: React.FC = () => {
                 size="lg"
                 className="mb-8"
                 textClassName={`${PAGE_SCREEN_TITLE_CLASS} leading-[0.9] text-white`}
-                value={editorial?.about.heroTitle[lang] ?? 'NOSOTRXS'}
+                value={resolveEditorialText(editorial?.about.heroTitle, lang)}
                 language={lang}
                 localizedValues={editorial?.about.heroTitle}
                 onCommit={(next) => editor.commitEditorialField('about', 'heroTitle', lang, next)}
@@ -82,7 +56,7 @@ const AboutPage: React.FC = () => {
               />
             ) : (
               <h1 className={`${PAGE_SCREEN_TITLE_CLASS} leading-[0.9] text-white mb-8`}>
-                {editorial?.about.heroTitle[lang] ?? 'NOSOTRXS'}
+                {resolveEditorialText(editorial?.about.heroTitle, lang)}
               </h1>
             )}
             <div className="h-px w-full bg-[#474747]/30"></div>
@@ -95,10 +69,7 @@ const AboutPage: React.FC = () => {
                 <InlineEditableText
                   multiline
                   textClassName="text-2xl md:text-3xl font-['Space_Grotesk'] font-light leading-snug tracking-tight text-white"
-                  value={
-                    editorial?.about.lead[lang] ??
-                    'radionudista es un club social experimental diseñado para la transmisión de frecuencias no convencionales y el encuentro de estéticas periféricas.'
-                  }
+                  value={resolveEditorialText(editorial?.about.lead, lang)}
                   language={lang}
                   localizedValues={editorial?.about.lead}
                   onCommit={(next) => editor.commitEditorialField('about', 'lead', lang, next)}
@@ -109,8 +80,7 @@ const AboutPage: React.FC = () => {
               </div>
             ) : (
               <p className="text-2xl md:text-3xl font-['Space_Grotesk'] font-light leading-snug tracking-tight text-white">
-                {editorial?.about.lead[lang] ??
-                  'radionudista es un club social experimental diseñado para la transmisión de frecuencias no convencionales y el encuentro de estéticas periféricas.'}
+                {resolveEditorialText(editorial?.about.lead, lang)}
               </p>
             )}
             <div className="text-lg space-y-8 text-[#c6c6c6] font-['Inter'] leading-relaxed">
@@ -120,10 +90,7 @@ const AboutPage: React.FC = () => {
                     <InlineEditableText
                       multiline
                       textClassName="text-lg text-[#c6c6c6] font-['Inter'] leading-relaxed"
-                      value={
-                        editorial?.about.paragraph1[lang] ??
-                        'Nacimos en la grieta entre lo digital y lo físico, operando como una plataforma de difusión para artistas, selectores y pensadores que habitan los márgenes del mainstream cultural. Nuestra señal no es solo sonido; es un manifiesto visual y táctil que se manifiesta en cada píxel y cada onda sonora.'
-                      }
+                      value={resolveEditorialText(editorial?.about.paragraph1, lang)}
                       language={lang}
                       localizedValues={editorial?.about.paragraph1}
                       onCommit={(next) => editor.commitEditorialField('about', 'paragraph1', lang, next)}
@@ -136,10 +103,7 @@ const AboutPage: React.FC = () => {
                     <InlineEditableText
                       multiline
                       textClassName="text-lg text-[#c6c6c6] font-['Inter'] leading-relaxed"
-                      value={
-                        editorial?.about.paragraph2[lang] ??
-                        'Entendemos la radio como un espacio de resistencia y juego. No buscamos la perfección del estudio clínico, sino la verdad de la interferencia, el glitch y la conexión humana cruda. Radionudista es, ante todo, un refugio para la curiosidad sin filtros.'
-                      }
+                      value={resolveEditorialText(editorial?.about.paragraph2, lang)}
                       language={lang}
                       localizedValues={editorial?.about.paragraph2}
                       onCommit={(next) => editor.commitEditorialField('about', 'paragraph2', lang, next)}
@@ -152,12 +116,10 @@ const AboutPage: React.FC = () => {
               ) : (
                 <>
                   <p>
-                    {editorial?.about.paragraph1[lang] ??
-                      'Nacimos en la grieta entre lo digital y lo físico, operando como una plataforma de difusión para artistas, selectores y pensadores que habitan los márgenes del mainstream cultural. Nuestra señal no es solo sonido; es un manifiesto visual y táctil que se manifiesta en cada píxel y cada onda sonora.'}
+                    {resolveEditorialText(editorial?.about.paragraph1, lang)}
                   </p>
                   <p>
-                    {editorial?.about.paragraph2[lang] ??
-                      'Entendemos la radio como un espacio de resistencia y juego. No buscamos la perfección del estudio clínico, sino la verdad de la interferencia, el glitch y la conexión humana cruda. Radionudista es, ante todo, un refugio para la curiosidad sin filtros.'}
+                    {resolveEditorialText(editorial?.about.paragraph2, lang)}
                   </p>
                 </>
               )}
@@ -173,7 +135,7 @@ const AboutPage: React.FC = () => {
                     as="h2"
                     size="lg"
                     textClassName="font-['Space_Grotesk'] text-3xl md:text-4xl font-bold uppercase tracking-tight text-white"
-                    value={credits.heading[lang]}
+                    value={resolveEditorialText(credits.heading, lang)}
                     language={lang}
                     localizedValues={credits.heading}
                     onCommit={(next) =>
@@ -188,7 +150,7 @@ const AboutPage: React.FC = () => {
                     size="sm"
                     className="ml-auto max-w-[min(100%,20rem)] text-right"
                     textClassName="font-['Space_Grotesk'] text-[10px] tracking-[0.18em] uppercase text-[#919191]"
-                    value={credits.subheading[lang]}
+                    value={resolveEditorialText(credits.subheading, lang)}
                     language={lang}
                     localizedValues={credits.subheading}
                     onCommit={(next) =>
@@ -202,10 +164,10 @@ const AboutPage: React.FC = () => {
               ) : (
                 <>
                   <h2 className="font-['Space_Grotesk'] text-3xl md:text-4xl font-bold uppercase tracking-tight text-white">
-                    {credits.heading[lang]}
+                    {resolveEditorialText(credits.heading, lang)}
                   </h2>
                   <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.18em] uppercase text-[#919191]">
-                    {credits.subheading[lang]}
+                    {resolveEditorialText(credits.subheading, lang)}
                   </p>
                 </>
               )}
@@ -225,7 +187,7 @@ const AboutPage: React.FC = () => {
                       size="sm"
                       className="mb-4"
                       textClassName="font-['Space_Grotesk'] text-[11px] tracking-[0.16em] uppercase text-[#919191]"
-                      value={group.title[lang]}
+                      value={resolveEditorialText(group.title, lang)}
                       language={lang}
                       localizedValues={group.title}
                       onCommit={(next) =>
@@ -247,7 +209,7 @@ const AboutPage: React.FC = () => {
                     />
                   ) : (
                     <h3 className="font-['Space_Grotesk'] text-[11px] tracking-[0.16em] uppercase text-[#919191] mb-4">
-                      {group.title[lang]}
+                      {resolveEditorialText(group.title, lang)}
                     </h3>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
@@ -305,7 +267,7 @@ const AboutPage: React.FC = () => {
                   size="sm"
                   className="mb-4"
                   textClassName="font-['Space_Grotesk'] text-[11px] tracking-[0.16em] uppercase text-[#919191]"
-                  value={credits.collaboratorsHeading[lang]}
+                  value={resolveEditorialText(credits.collaboratorsHeading, lang)}
                   language={lang}
                   localizedValues={credits.collaboratorsHeading}
                   onCommit={(next) =>
@@ -323,7 +285,7 @@ const AboutPage: React.FC = () => {
                 />
               ) : (
                 <h3 className="font-['Space_Grotesk'] text-[11px] tracking-[0.16em] uppercase text-[#919191] mb-4">
-                  {credits.collaboratorsHeading[lang]}
+                  {resolveEditorialText(credits.collaboratorsHeading, lang)}
                 </h3>
               )}
               <div className="flex flex-wrap items-center gap-2">
@@ -370,7 +332,7 @@ const AboutPage: React.FC = () => {
                   <InlineEditableText
                     multiline
                     textClassName="text-base leading-relaxed text-[#c6c6c6]"
-                    value={credits.collaboratorsNote[lang]}
+                    value={resolveEditorialText(credits.collaboratorsNote, lang)}
                     language={lang}
                     localizedValues={credits.collaboratorsNote}
                     onCommit={(next) =>
@@ -389,7 +351,7 @@ const AboutPage: React.FC = () => {
                 </div>
               ) : (
                 <p className="mt-5 text-base leading-relaxed text-[#c6c6c6]">
-                  {credits.collaboratorsNote[lang]}
+                  {resolveEditorialText(credits.collaboratorsNote, lang)}
                 </p>
               )}
             </section>

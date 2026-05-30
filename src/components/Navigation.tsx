@@ -8,9 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { useAudio } from '../contexts/AudioContext';
 import { useNewsTicker } from '../hooks/useTextScrolling';
 import { useContentIndexData } from '../hooks/useEditorContent';
-import { mapUiLanguageToContentLanguage } from '../utils/contentLanguage';
+import { mapRouteToContentIndexLanguage, resolveContentIndexEntry } from '../utils/contentLanguage';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
 import MediaButton from './ui/MediaButton';
 import EditorPublishBar from './EditorPublishBar';
+import { useOptionalEditor } from '../contexts/EditorContext';
 
 interface NavigationItem {
   id: string;
@@ -51,13 +53,15 @@ const Navigation: React.FC<NavigationProps> = ({
     const { t } = useTranslation();
   const audio = useAudio();
   const contentIndex = useContentIndexData();
+  const editor = useOptionalEditor();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   // --- Dynamic nav items from indexed content (contentIndex.json) ---
   const supportedLangs = env.SUPPORTED_LANGUAGES;
   const currentLang = getCurrentLang(location.pathname, supportedLangs);
-  const contentLang = mapUiLanguageToContentLanguage(currentLang);
+  const routeLang = useRouteLanguage();
+  const contentLang = mapRouteToContentIndexLanguage(routeLang);
 
   // Helper to prefix nav paths with current language
   const getNavPath = (item: NavigationItem) => {
@@ -77,7 +81,7 @@ const Navigation: React.FC<NavigationProps> = ({
     const items: NavigationItem[] = [];
     const staticRouteIds = new Set(['acerca-de-nosotros']);
     Object.entries(contentIndex).forEach(([id, langs]) => {
-      const entry = (langs as Record<string, Record<string, unknown>>)[contentLang];
+      const entry = resolveContentIndexEntry<Record<string, unknown>>(langs, contentLang);
       if (
         entry &&
         entry.menu &&
@@ -86,8 +90,8 @@ const Navigation: React.FC<NavigationProps> = ({
       ) {
         items.push({
           id: `${id}-${currentLang}`,
-          label: entry.menu,
-          path: entry.slug // Only the slug, not a full path
+          label: String(entry.menu),
+          path: String(entry.slug)
         });
       }
     });
@@ -95,8 +99,8 @@ const Navigation: React.FC<NavigationProps> = ({
     return items.sort((a, b) => {
       const idA = a.id?.split('-')[0];
       const idB = b.id?.split('-')[0];
-      const posA = contentIndex?.[idA]?.[contentLang]?.menu_position ?? 9999;
-      const posB = contentIndex?.[idB]?.[contentLang]?.menu_position ?? 9999;
+      const posA = (resolveContentIndexEntry<Record<string, unknown>>(contentIndex?.[idA], contentLang)?.menu_position as number | undefined) ?? 9999;
+      const posB = (resolveContentIndexEntry<Record<string, unknown>>(contentIndex?.[idB], contentLang)?.menu_position as number | undefined) ?? 9999;
       return posA - posB;
     });
   }, [contentIndex, contentLang, currentLang]);
@@ -155,10 +159,6 @@ const Navigation: React.FC<NavigationProps> = ({
       <nav
         className={`fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 sm:px-6 h-20 w-full gap-3 sm:gap-4 ${className}`}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 justify-center md:flex">
-          <EditorPublishBar className="pointer-events-auto" />
-        </div>
-
         {/* Izquierda: solo logo */}
         <div className="flex shrink-0 items-center min-w-0">
           <Logo size="medium" className="scale-110 origin-left" />
@@ -204,6 +204,19 @@ const Navigation: React.FC<NavigationProps> = ({
               </Link>
             );
           })}
+          {editor?.enabled && (
+            <div className="flex shrink-0 items-center gap-3">
+              <EditorPublishBar />
+              <button
+                type="button"
+                onClick={() => { editor.logout(); }}
+                className="shrink-0 border border-red-400/40 bg-transparent px-2.5 py-1 text-[10px] uppercase tracking-widest text-red-400/70 transition hover:border-red-400/70 hover:text-red-400"
+                title="Cerrar sesión editor"
+              >
+                Cerrar editor
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Móvil: play compacto + menú */}
@@ -286,6 +299,18 @@ const Navigation: React.FC<NavigationProps> = ({
               })}
 
               {/* Mobile menu keeps links-only to reduce noise */}
+              {editor?.enabled && (
+                <div className="space-y-3 border-t border-white/10 pt-4">
+                  <EditorPublishBar className="w-full [&>button]:w-full" />
+                  <button
+                    type="button"
+                    onClick={() => { handleMobileNavClick(); editor.logout(); }}
+                    className="block w-full border border-red-400/40 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-red-400/70 transition hover:border-red-400/70 hover:text-red-400"
+                  >
+                    Cerrar editor
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* PatreonButton positioned at bottom of mobile menu panel */}

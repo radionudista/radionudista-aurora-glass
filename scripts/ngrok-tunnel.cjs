@@ -27,7 +27,7 @@ const port = Number(process.env.NGROK_LOCAL_PORT || 8080);
 const token = (process.env.NGROK_AUTHTOKEN || "").trim();
 const forced = (process.env.TUNNEL_PROVIDER || "").trim().toLowerCase();
 const editorEnabled = String(process.env.VITE_EDITOR_ENABLED || "").toLowerCase() === "true";
-const editorToken = (process.env.EDITOR_DEV_TOKEN || "").trim();
+const editorPasswordHash = (process.env.VITE_EDITOR_PASSWORD_HASH || "").trim();
 let ngrokProcess = null;
 
 function ngrokConfigExists() {
@@ -55,8 +55,8 @@ async function shutdown() {
     process.exit(1);
   }
 
-  if (editorEnabled && !editorToken) {
-    console.error("VITE_EDITOR_ENABLED=true requiere EDITOR_DEV_TOKEN antes de abrir ngrok.");
+  if (editorEnabled && !editorPasswordHash) {
+    console.error("VITE_EDITOR_ENABLED=true requiere VITE_EDITOR_PASSWORD_HASH antes de abrir ngrok.");
     process.exit(1);
   }
 

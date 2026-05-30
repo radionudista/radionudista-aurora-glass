@@ -14,6 +14,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+!.env.development.example
 .editor-translate-usage.json
 
 # Editor directories and files
@@ -31,3 +32,4 @@ dist-ssr
 CLAUDE.md
 planificacion_version1.1.md
 prep_meet_v1.1.txt
+handoff-deploy-prod.txt

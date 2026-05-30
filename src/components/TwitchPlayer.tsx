@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import BackgroundVideo from './BackgroundVideo';
 import Logo from './Logo';
 import { getDynamicPlayerSize } from '../constants/mediaConstants';
 import { env } from '../config/env';
@@ -47,10 +46,7 @@ const TwitchPlayer = () => {
     setPlayerError(true);
   };
   return (
-    <div className="min-h-screen w-full overflow-hidden relative">
-      <BackgroundVideo overlayOpacity={0.6} />
-      
-      {/* Main Content */}
+    <div className="min-h-screen w-full overflow-hidden relative bg-black">
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
         {/* Logo */}
         <Logo size="medium" className="mb-8" />

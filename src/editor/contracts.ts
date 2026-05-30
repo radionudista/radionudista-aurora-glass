@@ -11,8 +11,8 @@ const localizedTextSchema = z
   })
   .transform((value) => ({
     es: value.es,
-    pt: value.pt ?? value.es,
-    en: value.en ?? value.es,
+    pt: value.pt ?? '',
+    en: value.en ?? '',
   }));
 
 export const contentEntrySchema = z.object({

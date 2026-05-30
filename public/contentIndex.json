@@ -44,7 +44,7 @@
       "social": [
         "@kingtanatv"
       ],
-      "logo": "checkpoint-1777569592180.jpg",
+      "logo": "4.png",
       "audio_source": "checkpoint.mp3",
       "menu": "",
       "markdownfile": "src\\content\\es\\checkpoint.md",
@@ -66,7 +66,7 @@
       "social": [
         "@kingtanatv"
       ],
-      "logo": "checkpoint-1777569592180.jpg",
+      "logo": "4.png",
       "audio_source": "checkpoint.mp3",
       "menu": "",
       "markdownfile": "src\\content\\pt\\checkpoint.md",
@@ -279,6 +279,33 @@
       "menu": "",
       "markdownfile": "src\\content\\pt\\misterios.md",
       "content": "Raridades musicais latino-americanas em um arquivo paranormal.\r\nInspirada em programas como Archivos del Más Allá, Nuestro Insólito Universo e Escalofríos, esta jornada sonora resgata canções, lendas sonoras e pistas esquecidas do inconsciente coletivo latino-americano. Narrada como um arquivo secreto, é uma cápsula de terror, história e prazer auditivo com toques aterrorizantes de jazz latino.\r\nazz latino."
+    },
+    "en": {
+      "language": "en",
+      "title": "Misterios",
+      "slug": "misterios",
+      "id": "misterios",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 1,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Mon 22:00 - America/Sao_Paulo",
+      "schedule_meta": {
+        "weekday": 1,
+        "startTime": "22:00",
+        "timezone": "America/Sao_Paulo"
+      },
+      "talent": [
+        "Gustavo Perez"
+      ],
+      "social": [
+        "@gustavodesnudo"
+      ],
+      "logo": "5.png",
+      "audio_source": "misterios.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\misterios.md",
+      "content": "Latin American musical rarities in paranormal archive key.\r\n  Inspired by programs such as Archivos del Más Allá, Nuestro Insólito Universo and Escalofríos, this sound journey rescues songs, sound legends and forgotten tracks from the Latin American collective unconscious. Told like a secret file, it is a capsule of terror, history and auditory pleasure with horrifying mutations of Latin jazz.\r\nlatin jazz"
     }
   },
   "pindorama": {

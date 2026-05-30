@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import BackgroundVideo from '../components/BackgroundVideo';
 import Logo from '../components/Logo';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';

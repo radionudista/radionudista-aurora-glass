@@ -17,7 +17,9 @@ import { devEditorService } from '../services/devEditorService';
 import EditableImageField from '../components/EditableImageField';
 import EditableStringListItem from '../components/EditableStringListItem';
 import InlineEditableText from '../components/InlineEditableText';
-import { mapUiLanguageToContentLanguage } from '../utils/contentLanguage';
+import { mapRouteToContentIndexLanguage, resolveContentIndexEntry, resolveContentIndexString } from '../utils/contentLanguage';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
+import { buildLocalizedDraft } from '../utils/editorialText';
 import {
   formatProgramScheduleForViewer,
   isEpisodeReleased,
@@ -108,22 +110,40 @@ const ProgramDetailPage: React.FC = () => {
   };
 
   const currentLang = getCurrentLang(location.pathname, env.SUPPORTED_LANGUAGES);
-  const lang = currentLang === 'pt' ? 'pt' : currentLang === 'en' ? 'en' : 'es';
-  const contentLang = mapUiLanguageToContentLanguage(currentLang);
+  const routeLang = useRouteLanguage();
+  const contentLang = mapRouteToContentIndexLanguage(currentLang);
 
   const program = useMemo(() => {
     if (!programId) return null;
 
-    const allPrograms = Object.values(contentIndex)
-      .map((entry) => entry[contentLang] as ProgramMetadata | undefined)
-      .filter((entry): entry is ProgramMetadata => Boolean(entry))
-      .filter((entry) => entry.component === 'ProgramPage' && (entry.public === true || entry.public === 'true'));
+    const target = normalize(programId);
 
-    return allPrograms.find(
-      (entry) =>
-        normalize(entry.id) === normalize(programId)
-        || normalize(entry.slug) === normalize(programId)
-    ) || null;
+    for (const [key, localized] of Object.entries(contentIndex)) {
+      for (const probeLang of ['es', 'pt', 'en'] as const) {
+        const candidate = localized[probeLang] as ProgramMetadata | undefined;
+        if (!candidate || candidate.component !== 'ProgramPage') continue;
+        if (candidate.public !== true && candidate.public !== 'true') continue;
+        if (
+          normalize(candidate.id) !== target
+          && normalize(candidate.slug) !== target
+          && normalize(key) !== target
+        ) {
+          continue;
+        }
+
+        const base = resolveContentIndexEntry<ProgramMetadata>(localized, contentLang);
+        if (!base) return null;
+
+        return {
+          ...base,
+          id: candidate.id || key,
+          title: resolveContentIndexString(localized, contentLang, 'title') || base.title,
+          content: resolveContentIndexString(localized, contentLang, 'content') || base.content || '',
+        };
+      }
+    }
+
+    return null;
   }, [contentIndex, contentLang, programId]);
 
   const logoSrc = program?.logo ? `/images/logos/${program.logo}` : null;
@@ -415,7 +435,7 @@ const ProgramDetailPage: React.FC = () => {
     editor?.enabled
       ? editor.commitContentField(
           program.id,
-          lang,
+          routeLang,
           'talent',
           nextTalent.map((item) => item.trim()).filter(Boolean)
         )
@@ -425,7 +445,7 @@ const ProgramDetailPage: React.FC = () => {
     editor?.enabled
       ? editor.commitContentField(
           program.id,
-          lang,
+          routeLang,
           'social',
           nextSocial.map((item) => normalizeSocialHandle(item)).filter(Boolean)
         )
@@ -532,13 +552,13 @@ const ProgramDetailPage: React.FC = () => {
           className="mt-4"
           textClassName={`${PAGE_SCREEN_TITLE_CLASS} leading-[0.94] tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.75)]`}
           value={program.title}
-          language={lang}
-          localizedValues={{
-            es: (contentIndex[program.id]?.es?.title as string | undefined) ?? program.title,
-            en: (contentIndex[program.id]?.en?.title as string | undefined) ?? program.title,
-            pt: (contentIndex[program.id]?.pt?.title as string | undefined) ?? program.title,
-          }}
-          onCommit={(next) => editor.commitContentField(program.id, lang, 'title', next)}
+          language={routeLang}
+          localizedValues={buildLocalizedDraft({
+            es: contentIndex[program.id]?.es?.title as string | undefined,
+            en: contentIndex[program.id]?.en?.title as string | undefined,
+            pt: contentIndex[program.id]?.pt?.title as string | undefined,
+          }, program.title)}
+          onCommit={(next) => editor.commitContentField(program.id, routeLang, 'title', next)}
           onCommitLocalized={(values) =>
             editor.commitContentFieldLocalized(program.id, 'title', values)
           }
@@ -648,13 +668,13 @@ const ProgramDetailPage: React.FC = () => {
               value={program.content ?? ''}
               multiline
               textClassName="font-['Space_Grotesk'] text-sm italic leading-relaxed text-white/70 md:text-base"
-              language={lang}
-              localizedValues={{
-                es: (contentIndex[program.id]?.es?.content as string | undefined) ?? (program.content ?? ''),
-                en: (contentIndex[program.id]?.en?.content as string | undefined) ?? (program.content ?? ''),
-                pt: (contentIndex[program.id]?.pt?.content as string | undefined) ?? (program.content ?? ''),
-              }}
-              onCommit={(next) => editor.commitContentField(program.id, lang, 'content', next)}
+              language={routeLang}
+              localizedValues={buildLocalizedDraft({
+                es: contentIndex[program.id]?.es?.content as string | undefined,
+                en: contentIndex[program.id]?.en?.content as string | undefined,
+                pt: contentIndex[program.id]?.pt?.content as string | undefined,
+              }, program.content ?? '')}
+              onCommit={(next) => editor.commitContentField(program.id, routeLang, 'content', next)}
               onCommitLocalized={(values) =>
                 editor.commitContentFieldLocalized(program.id, 'content', values)
               }

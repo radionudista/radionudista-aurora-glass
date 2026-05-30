@@ -7,7 +7,9 @@ export class CalendarService implements ICalendarService {
   public async getWeeklySchedule(timeMin: Date, timeMax: Date): Promise<ScheduleEvent[]> {
     const configData = env.CALENDAR_CONFIG_DATA;
     if (!configData || !configData.apiKey || !configData.calendarId) {
-      throw new Error('VITE_CALENDAR_CONFIG_DATA is missing or malformed.');
+      throw new Error(
+        'Faltan credenciales de Google Calendar. Configurá VITE_CALENDAR_API_KEY y VITE_CALENDAR_ID en .env.development.'
+      );
     }
 
     const { apiKey, calendarId, config, maxResults } = configData;

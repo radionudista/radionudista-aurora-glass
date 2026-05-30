@@ -1,7 +1,6 @@
 
 import React from 'react';
 import Logo from './Logo';
-import BackgroundVideo from './BackgroundVideo';
 import CountdownUnit from './ui/CountdownUnit';
 import { useCountdown } from '../hooks/useCountdown';
 import { TIME_CONSTANTS } from '../constants/timeConstants';
@@ -37,10 +36,7 @@ const CountdownTeaser: React.FC<CountdownTeaserProps> = ({
   });
 
   return (
-    <div className="min-h-screen w-full overflow-hidden relative">
-      <BackgroundVideo overlayOpacity={0.5} />
-      
-      {/* Main Content */}
+    <div className="min-h-screen w-full overflow-hidden relative bg-black">
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
         <div className="flex flex-col items-center gap-8">
           {/* Logo */}

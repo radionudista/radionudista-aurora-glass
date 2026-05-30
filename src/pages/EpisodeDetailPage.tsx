@@ -16,7 +16,8 @@ import { useArchivePlayer } from '../contexts/ArchivePlayerContext';
 import EditableImageField from '../components/EditableImageField';
 import EditableStringListItem from '../components/EditableStringListItem';
 import InlineEditableText from '../components/InlineEditableText';
-import { mapUiLanguageToContentLanguage } from '../utils/contentLanguage';
+import { mapRouteToContentIndexLanguage, resolveContentIndexEntry, resolveContentIndexString } from '../utils/contentLanguage';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
 import { devEditorService } from '../services/devEditorService';
 import {
   formatProgramScheduleForViewer,
@@ -69,20 +70,40 @@ const EpisodeDetailPage: React.FC = () => {
   };
 
   const currentLang = getCurrentLang(location.pathname, env.SUPPORTED_LANGUAGES);
-  const contentLang = mapUiLanguageToContentLanguage(currentLang);
+  const routeLang = useRouteLanguage();
+  const contentLang = mapRouteToContentIndexLanguage(routeLang);
 
   const program = useMemo(() => {
     if (!routeProgramId) return null;
-    const allPrograms = Object.values(contentIndex)
-      .map((entry) => entry[contentLang] as ProgramMetadata | undefined)
-      .filter((entry): entry is ProgramMetadata => Boolean(entry))
-      .filter((entry) => entry.component === 'ProgramPage' && (entry.public === true || entry.public === 'true'));
 
-    return allPrograms.find(
-      (entry) =>
-        normalize(entry.id) === normalize(routeProgramId)
-        || normalize(entry.slug) === normalize(routeProgramId)
-    ) || null;
+    const target = normalize(routeProgramId);
+
+    for (const [key, localized] of Object.entries(contentIndex)) {
+      for (const probeLang of ['es', 'pt', 'en'] as const) {
+        const candidate = localized[probeLang] as ProgramMetadata | undefined;
+        if (!candidate || candidate.component !== 'ProgramPage') continue;
+        if (candidate.public !== true && candidate.public !== 'true') continue;
+        if (
+          normalize(candidate.id) !== target
+          && normalize(candidate.slug) !== target
+          && normalize(key) !== target
+        ) {
+          continue;
+        }
+
+        const base = resolveContentIndexEntry<ProgramMetadata>(localized, contentLang);
+        if (!base) return null;
+
+        return {
+          ...base,
+          id: candidate.id || key,
+          title: resolveContentIndexString(localized, contentLang, 'title') || base.title,
+          content: resolveContentIndexString(localized, contentLang, 'content') || base.content || '',
+        };
+      }
+    }
+
+    return null;
   }, [contentIndex, contentLang, routeProgramId]);
 
   const archiveProgramId = program?.id ?? '';

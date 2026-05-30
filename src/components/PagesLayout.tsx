@@ -1,9 +1,7 @@
 import React, { useEffect, useLayoutEffect } from 'react';
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import Layout from './Layout';
-import BackgroundVideo from './BackgroundVideo';
 import { AudioProvider } from '../contexts/AudioContext';
-import { env } from '../config/env';
 import { EditorProvider } from '../contexts/EditorContext';
 import { ArchivePlayerProvider } from '../contexts/ArchivePlayerContext';
 
@@ -16,8 +14,6 @@ function scrollDocumentToTop() {
 const PagesLayout = () => {
   const location = useLocation();
   const navigationType = useNavigationType();
-  const path = location.pathname.replace(/\/+$/, '');
-  const isHomeRoute = env.SUPPORTED_LANGUAGES.some((lang) => path === `/${lang}`);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -34,10 +30,7 @@ const PagesLayout = () => {
     <EditorProvider>
       <AudioProvider>
         <ArchivePlayerProvider>
-          <div className="min-h-screen w-full overflow-hidden relative">
-            {!isHomeRoute && <BackgroundVideo />}
-
-            {/* Main Content */}
+          <div className="min-h-screen w-full relative bg-black">
             <div className="relative z-10 min-h-screen flex flex-col">
               <Layout>
                 <Outlet />

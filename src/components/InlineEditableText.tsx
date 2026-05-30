@@ -3,6 +3,7 @@ import { Check, Pencil, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import type { EditorLanguage } from '../editor/contracts';
+import { buildLocalizedDraft } from '../utils/editorialText';
 
 type LocalizedTextValues = Record<EditorLanguage, string>;
 
@@ -48,11 +49,9 @@ const InlineEditableText: React.FC<InlineEditableTextProps> = ({
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
   const [activeLangTab, setActiveLangTab] = React.useState<EditorLanguage>(language);
-  const [localizedDraft, setLocalizedDraft] = React.useState<LocalizedTextValues>(() => ({
-    es: localizedValues?.es ?? value,
-    en: localizedValues?.en ?? localizedValues?.es ?? value,
-    pt: localizedValues?.pt ?? localizedValues?.es ?? value,
-  }));
+  const [localizedDraft, setLocalizedDraft] = React.useState<LocalizedTextValues>(() =>
+    buildLocalizedDraft(localizedValues, value)
+  );
   const [saving, setSaving] = React.useState(false);
   const [translating, setTranslating] = React.useState(false);
   const [translateMessage, setTranslateMessage] = React.useState<string | null>(null);
@@ -64,15 +63,11 @@ const InlineEditableText: React.FC<InlineEditableTextProps> = ({
   React.useEffect(() => {
     if (!editing) {
       setDraft(value);
-      setLocalizedDraft({
-        es: localizedValues?.es ?? value,
-        en: localizedValues?.en ?? localizedValues?.es ?? value,
-        pt: localizedValues?.pt ?? localizedValues?.es ?? value,
-      });
+      setLocalizedDraft(buildLocalizedDraft(localizedValues, value));
       setActiveLangTab(language);
       setTranslateMessage(null);
     }
-  }, [editing, value, localizedValues?.es, localizedValues?.en, localizedValues?.pt, language]);
+  }, [editing, value, localizedValues, language]);
 
   const handleAccept = async () => {
     setSaving(true);
@@ -90,11 +85,7 @@ const InlineEditableText: React.FC<InlineEditableTextProps> = ({
 
   const handleCancel = () => {
     setDraft(value);
-    setLocalizedDraft({
-      es: localizedValues?.es ?? value,
-      en: localizedValues?.en ?? localizedValues?.es ?? value,
-      pt: localizedValues?.pt ?? localizedValues?.es ?? value,
-    });
+    setLocalizedDraft(buildLocalizedDraft(localizedValues, value));
     setActiveLangTab(language);
     setTranslateMessage(null);
     setEditing(false);
@@ -232,11 +223,7 @@ const InlineEditableText: React.FC<InlineEditableTextProps> = ({
       onClick={() => {
         onStartEdit?.();
         if (useLocalizedEditor) {
-          setLocalizedDraft({
-            es: localizedValues?.es ?? value,
-            en: localizedValues?.en ?? localizedValues?.es ?? value,
-            pt: localizedValues?.pt ?? localizedValues?.es ?? value,
-          });
+          setLocalizedDraft(buildLocalizedDraft(localizedValues, value));
           setActiveLangTab(language);
         } else {
           setDraft(value);

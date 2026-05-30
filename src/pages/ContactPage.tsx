@@ -3,16 +3,16 @@ import ContactForm from '../components/ContactForm';
 import { PAGE_SCREEN_TITLE_CLASS } from '../constants/layoutConstants';
 import ContactInformation from '../components/ContactInformation';
 import FollowUs from '../components/FollowUs';
-import { useTranslation } from '../hooks/useTranslation';
 import { useEditorialText } from '../hooks/useEditorContent';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
+import { resolveEditorialText } from '../utils/editorialText';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import InlineEditableText from '../components/InlineEditableText';
 
 const ContactPage = () => {
-  const { t, i18n } = useTranslation();
   const editorial = useEditorialText();
   const editor = useOptionalEditor();
-  const lang = i18n.language === 'pt' ? 'pt' : i18n.language === 'en' ? 'en' : 'es';
+  const lang = useRouteLanguage();
 
   const handleFormSubmit = async (formData: Record<string, unknown>) => {
     // Handle form submission logic here
@@ -31,7 +31,7 @@ const ContactPage = () => {
               align="center"
               className="mb-6"
               textClassName={`${PAGE_SCREEN_TITLE_CLASS} text-white`}
-              value={editorial?.contact.pageTitle[lang] ?? t('contact.page-title')}
+              value={resolveEditorialText(editorial?.contact.pageTitle, lang)}
               language={lang}
               localizedValues={editorial?.contact.pageTitle}
               onCommit={(next) => editor.commitEditorialField('contact', 'pageTitle', lang, next)}
@@ -41,7 +41,7 @@ const ContactPage = () => {
             />
           ) : (
             <h1 className={`${PAGE_SCREEN_TITLE_CLASS} text-white mb-6`}>
-              {editorial?.contact.pageTitle[lang] ?? t('contact.page-title')}
+              {resolveEditorialText(editorial?.contact.pageTitle, lang)}
             </h1>
           )}
           {editor?.enabled ? (
@@ -49,7 +49,7 @@ const ContactPage = () => {
               as="div"
               align="center"
               textClassName="text-xl text-gray-300"
-              value={editorial?.contact.pageSubtitle[lang] ?? t('contact.page-subtitle')}
+              value={resolveEditorialText(editorial?.contact.pageSubtitle, lang)}
               language={lang}
               localizedValues={editorial?.contact.pageSubtitle}
               onCommit={(next) => editor.commitEditorialField('contact', 'pageSubtitle', lang, next)}
@@ -59,7 +59,7 @@ const ContactPage = () => {
             />
           ) : (
             <p className="text-xl text-gray-300">
-              {editorial?.contact.pageSubtitle[lang] ?? t('contact.page-subtitle')}
+              {resolveEditorialText(editorial?.contact.pageSubtitle, lang)}
             </p>
           )}
         </div>

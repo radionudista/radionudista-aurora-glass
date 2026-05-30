@@ -73,7 +73,7 @@ const parseJson = async <T>(response: Response): Promise<T> => {
 const EDITOR_TOKEN_STORAGE_KEY = 'rn_editor_dev_token';
 
 let editorToken =
-  typeof window !== 'undefined' ? window.sessionStorage.getItem(EDITOR_TOKEN_STORAGE_KEY) : null;
+  typeof window !== 'undefined' ? window.localStorage.getItem(EDITOR_TOKEN_STORAGE_KEY) : null;
 
 const isEditorEndpoint = (url: string) => url.startsWith('/__dev/editor');
 
@@ -82,13 +82,13 @@ export const devEditorAuth = {
   setToken: (token: string) => {
     editorToken = token.trim();
     if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(EDITOR_TOKEN_STORAGE_KEY, editorToken);
+      window.localStorage.setItem(EDITOR_TOKEN_STORAGE_KEY, editorToken);
     }
   },
   clearToken: () => {
     editorToken = null;
     if (typeof window !== 'undefined') {
-      window.sessionStorage.removeItem(EDITOR_TOKEN_STORAGE_KEY);
+      window.localStorage.removeItem(EDITOR_TOKEN_STORAGE_KEY);
     }
   },
 };
@@ -191,41 +191,11 @@ export class DevEditorService {
     source: 'es';
     targets: Array<'en' | 'pt'>;
   }): Promise<TranslateTextResponse> {
-    const text = payload.text.trim();
-    if (!text) {
-      throw new Error('Texto vacío para traducir.');
-    }
-
-    const translated: { en: string; pt: string } = { en: text, pt: text };
-
-    for (const target of payload.targets) {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${payload.source}|${target}`;
-      const response = await fetch(url, { method: 'GET' });
-      if (!response.ok) {
-        const raw = await response.text();
-        throw new Error(`Translate provider error (${response.status}): ${raw.slice(0, 200)}`);
-      }
-      const data = (await response.json()) as {
-        responseData?: { translatedText?: string };
-      };
-      const translatedText = data.responseData?.translatedText;
-      if (!translatedText) {
-        throw new Error('Respuesta inválida del proveedor de traducción.');
-      }
-      translated[target] = translatedText;
-    }
-
-    const usedChars = text.length * payload.targets.length;
-    const month = new Date().toISOString().slice(0, 7);
-
-    return {
-      ok: true,
-      message: 'Texto traducido.',
-      month,
-      usedChars,
-      remainingChars: 999999999,
-      translated,
-    };
+    return requestJson('/__dev/editor/translate-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
   }
 
   public async fetchContentIndex(): Promise<ContentIndexData> {
@@ -234,37 +204,7 @@ export class DevEditorService {
   }
 
   public async fetchEditorial(): Promise<EditorialData> {
-    // #region agent log
-    fetch('http://127.0.0.1:7560/ingest/5ccebaa5-f0e4-4ced-b6b7-3a14221eeaa6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153f83' },
-      body: JSON.stringify({
-        sessionId: '153f83',
-        runId: 'pre-fix',
-        hypothesisId: 'H3',
-        location: 'src/services/devEditorService.ts:234',
-        message: 'fetchEditorial invoked',
-        data: { endpoint: '/editor/home-about-contact.json' },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     const data = await requestJson<unknown>('/editor/home-about-contact.json');
-    // #region agent log
-    fetch('http://127.0.0.1:7560/ingest/5ccebaa5-f0e4-4ced-b6b7-3a14221eeaa6', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '153f83' },
-      body: JSON.stringify({
-        sessionId: '153f83',
-        runId: 'pre-fix',
-        hypothesisId: 'H4',
-        location: 'src/services/devEditorService.ts:248',
-        message: 'fetchEditorial response parsed',
-        data: { hasData: Boolean(data) },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return editorialSchema.parse(data);
   }
 

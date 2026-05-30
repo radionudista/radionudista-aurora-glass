@@ -61,6 +61,47 @@ Upload the contents of `dist/` to your static host.
 3. Add all required `VITE_` environment variables.
 4. Deploy. Your site will be live at `https://your-project.pages.dev` or your custom domain.
 
+## Editor en producción (Cloudflare Pages)
+
+El login con hash funciona en prod si configurás **variables del cliente** (build) y **secretos del servidor** (Functions):
+
+### Variables de build (`VITE_*` en Cloudflare Pages)
+
+| Variable | Valor |
+|----------|--------|
+| `VITE_EDITOR_ENABLED` | `true` |
+| `VITE_EDITOR_SALT` | mismo salt que en local |
+| `VITE_EDITOR_PASSWORD_HASH` | hash SHA-256 de `salt+contraseña` |
+
+### Secretos de Functions (Settings → Environment variables, **no** expuestos al cliente)
+
+| Variable | Uso |
+|----------|-----|
+| `EDITOR_PASSWORD_HASH` | mismo valor que `VITE_EDITOR_PASSWORD_HASH` (valida el token en `/__dev/editor/*`) |
+| `EDITOR_GITHUB_TOKEN` | PAT con permiso `repo` para commitear JSON e imágenes |
+| `EDITOR_GITHUB_REPO` | `owner/repo` (ej. `tu-org/radionudista-web`) |
+| `EDITOR_GIT_BRANCH` | rama destino (ej. `dev`) |
+| `IA_ACCESS_KEY` / `IA_SECRET_KEY` | subida de episodios a Archive.org |
+| `IA_COLLECTION` | colección IA (ej. `opensource_audio`) |
+| `TRANSLATE_API_URL` / `TRANSLATE_API_KEY` | botón TRADUCIR del editor (opcional) |
+| `EDITOR_TRANSLATE_MONTHLY_CHAR_LIMIT` | límite mensual de caracteres traducidos |
+
+Local y prod usan la **misma API** (`/__dev/editor/*`) y los mismos endpoints; local escribe en disco + git push, prod commitea vía GitHub API.
+
+### Comportamiento
+
+- **`/editor-login`** → login con contraseña (hash en cliente).
+- **Aceptar** → POST `/__dev/editor/save` → commit directo a GitHub (rama `dev`).
+- No hay botón «Publicar GitHub» en prod (solo en local, para hacer `git push` tras guardar en disco).
+
+En **local** (`npm run dev`), el plugin Vite escribe en disco; **Publicar GitHub** hace el push. En **prod**, cada **Aceptar** ya commitea a GitHub (no hay disco intermedio).
+
+### Auto-merge a producción (`dev` → `master`)
+
+1. Configurá los secretos anteriores en Cloudflare.
+2. Añadí `EDITOR_GITHUB_TOKEN` como secret del repo (GitHub Actions).
+3. Cada push a `dev` (desde save o publish) dispara `dev-autopr.yml`: PR a `master`, checks, auto-merge.
+
 ---
 For more, see [Usage & Build](./usage.md) and [Environment Variables](./environment-variables.md).
 ## Example: Deploying to Vercel
