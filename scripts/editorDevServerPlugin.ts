@@ -76,7 +76,7 @@ export const editorDevServerPlugin = ({
       rootDir,
       supportedLanguages,
       gitRemote: process.env.EDITOR_GIT_REMOTE || 'origin',
-      gitBranch: process.env.EDITOR_GIT_BRANCH || 'dev',
+      gitBranch: process.env.EDITOR_GIT_BRANCH || 'master',
       githubToken: process.env.EDITOR_GITHUB_TOKEN || '',
     });
 

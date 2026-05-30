@@ -94,7 +94,7 @@ export interface LocalEditorStoreOptions {
 export const createLocalEditorStore = (options: LocalEditorStoreOptions): EditorStore => {
   const { rootDir, supportedLanguages } = options;
   const gitRemote = options.gitRemote || 'origin';
-  const gitBranch = options.gitBranch || 'dev';
+  const gitBranch = options.gitBranch || 'master';
   const githubToken = options.githubToken || '';
 
   const regenerateContentIndex = async () => {
