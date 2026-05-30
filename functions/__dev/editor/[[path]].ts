@@ -27,7 +27,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (authError) return authError;
 
   const token = (env.EDITOR_GITHUB_TOKEN || '').trim();
-  const branch = (env.EDITOR_GIT_BRANCH || 'dev').trim();
+  const branch = (env.EDITOR_GIT_BRANCH || 'master').trim();
   const repoRaw = (env.EDITOR_GITHUB_REPO || '').trim();
 
   if (!token || !repoRaw) {

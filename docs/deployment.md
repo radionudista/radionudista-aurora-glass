@@ -80,7 +80,7 @@ El login con hash funciona en prod si configurás **variables del cliente** (bui
 | `EDITOR_PASSWORD_HASH` | mismo valor que `VITE_EDITOR_PASSWORD_HASH` (valida el token en `/__dev/editor/*`) |
 | `EDITOR_GITHUB_TOKEN` | PAT con permiso `repo` para commitear JSON e imágenes |
 | `EDITOR_GITHUB_REPO` | `owner/repo` (ej. `tu-org/radionudista-web`) |
-| `EDITOR_GIT_BRANCH` | rama destino (ej. `dev`) |
+| `EDITOR_GIT_BRANCH` | `master` (prod directo; Cloudflare redeploy automático) |
 | `IA_ACCESS_KEY` / `IA_SECRET_KEY` | subida de episodios a Archive.org |
 | `IA_COLLECTION` | colección IA (ej. `opensource_audio`) |
 | `TRANSLATE_API_URL` / `TRANSLATE_API_KEY` | botón TRADUCIR del editor (opcional) |
@@ -91,16 +91,17 @@ Local y prod usan la **misma API** (`/__dev/editor/*`) y los mismos endpoints; l
 ### Comportamiento
 
 - **`/editor-login`** → login con contraseña (hash en cliente).
-- **Aceptar** → POST `/__dev/editor/save` → commit directo a GitHub (rama `dev`).
+- **Aceptar** → POST `/__dev/editor/save` → commit directo a GitHub (rama `master`).
 - No hay botón «Publicar GitHub» en prod (solo en local, para hacer `git push` tras guardar en disco).
 
 En **local** (`npm run dev`), el plugin Vite escribe en disco; **Publicar GitHub** hace el push. En **prod**, cada **Aceptar** ya commitea a GitHub (no hay disco intermedio).
 
-### Auto-merge a producción (`dev` → `master`)
+### Publicación automática a producción (`master`)
 
-1. Configurá los secretos anteriores en Cloudflare.
-2. Añadí `EDITOR_GITHUB_TOKEN` como secret del repo (GitHub Actions).
-3. Cada push a `dev` (desde save o publish) dispara `dev-autopr.yml`: PR a `master`, checks, auto-merge.
+1. Configurá los secretos anteriores en Cloudflare con `EDITOR_GIT_BRANCH=master`.
+2. El PAT de `EDITOR_GITHUB_TOKEN` debe poder **escribir en `master`** (usuario admin o bypass del ruleset «prod env»).
+3. Cada guardado commitea a `master` → Cloudflare Pages rebuilda → cambios visibles en radionudista.com (~1–3 min).
+4. GitHub Actions valida frontmatter/build en push a `master` (avisos si algo falla; el deploy ya puede estar en curso).
 
 ---
 For more, see [Usage & Build](./usage.md) and [Environment Variables](./environment-variables.md).
