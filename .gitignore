@@ -16,6 +16,7 @@ dist-ssr
 !.env.example
 !.env.development.example
 .editor-translate-usage.json
+scripts/output/
 
 # Editor directories and files
 .vscode/*

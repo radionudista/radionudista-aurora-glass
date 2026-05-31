@@ -15,10 +15,21 @@ import {
   PAGE_SHELL_CONTENT,
 } from '../constants/layoutConstants';
 import { isEpisodeReleased, isProgramScheduleMeta } from '../utils/programSchedule';
+import { resolveProgramLogoSrc } from '../utils/programLogo';
+import { useRouteLanguage } from '../hooks/useRouteLanguage';
+import { mapRouteToContentIndexLanguage } from '../utils/contentLanguage';
+import {
+  SCHEDULE_GRID_HEIGHT_PX,
+  SCHEDULE_PX_PER_HOUR,
+  scheduleEventBlockRect,
+  scheduleTimeToPx,
+} from '../constants/scheduleGrid';
 const SchedulePage: React.FC = () => {
     const contentIndexData = useContentIndexData();
     const archivePlayer = useArchivePlayer();
     const { t, i18n } = useTranslation();
+    const routeLang = useRouteLanguage();
+    const contentLang = mapRouteToContentIndexLanguage(routeLang);
     const { groupedEvents, isLoading, isError, currentDate, nextWeek, prevWeek, goToToday } = useSchedule();
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [mobileSelectedDay, setMobileSelectedDay] = useState<number>(() => {
@@ -68,8 +79,8 @@ const SchedulePage: React.FC = () => {
     }, [selectedEvent?.description]);
 
     const { data: selectedProgramEpisodes } = useQuery({
-        queryKey: ['episodes', selectedProgramId],
-        queryFn: () => episodeService.getEpisodesByProgram(selectedProgramId as string),
+        queryKey: ['episodes', selectedProgramId, contentLang],
+        queryFn: () => episodeService.getEpisodesByProgram(selectedProgramId as string, contentLang),
         enabled: Boolean(selectedProgramId),
         staleTime: 1000 * 60 * 10
     });
@@ -131,34 +142,28 @@ const SchedulePage: React.FC = () => {
         return day === 0 ? 7 : day;
     }, [now]);
 
-    const nowTop = useMemo(() => (now.getHours() + now.getMinutes() / 60) * 32, [now]);
+    const nowTop = useMemo(() => scheduleTimeToPx(now), [now]);
     const nowLineLeft = useMemo(() => `${((currentDayIndex - 1) / 7) * 100}%`, [currentDayIndex]);
 
     const hoursArray = Array.from({ length: 24 }).map((_, i) => i);
 
     const getEventDurationHours = (event: ScheduleEvent) => {
-        const startHour = event.startTime.getHours() + event.startTime.getMinutes() / 60;
-        const endHour = event.endTime.getHours() + event.endTime.getMinutes() / 60;
-        let duration = endHour - startHour;
-        if (duration < 0) duration += 24; // If crosses midnight
-        return duration;
+        const startMs = event.startTime.getTime();
+        const endMs = event.endTime.getTime();
+        let durationMs = endMs - startMs;
+        if (durationMs <= 0) {
+            const startHour = event.startTime.getHours() + event.startTime.getMinutes() / 60;
+            const endHour = event.endTime.getHours() + event.endTime.getMinutes() / 60;
+            let duration = endHour - startHour;
+            if (duration <= 0) duration += 24;
+            return duration;
+        }
+        return durationMs / (1000 * 60 * 60);
     };
 
-    // Helper to calculate position in the grid
-    const getEventStyle = (event: ScheduleEvent) => {
-        const startHour = event.startTime.getHours() + event.startTime.getMinutes() / 60;
+    const getEventLayout = (event: ScheduleEvent) => {
         const duration = getEventDurationHours(event);
-        
-        // 1 hour = 32px (because a 2-hour block is h-16 = 64px)
-        const top = startHour * 32;
-        const height = duration * 32;
-
-        return {
-            top: `${top}px`,
-            height: `${height}px`,
-            backgroundColor: event.color || '#ffffff',
-            color: event.color && event.color !== '#ffffff' ? '#000000' : '#000000',
-        };
+        return scheduleEventBlockRect(duration, event.startTime);
     };
 
     const episodeIsPlaying = Boolean(
@@ -171,7 +176,7 @@ const SchedulePage: React.FC = () => {
                     .grid-lines {
                     background-image: linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
                                       linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
-                    background-size: 100% 32px;
+                    background-size: 100% ${SCHEDULE_PX_PER_HOUR}px;
                 }
                 .glitch-hover:hover {
                     box-shadow: 2px 2px 0px #ffffff;
@@ -270,7 +275,7 @@ const SchedulePage: React.FC = () => {
                             {/* Days Header */}
                             <div className="grid grid-cols-8 border-b border-white/10">
                                 <div className="p-4 border-r border-white/10 font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase tracking-widest">
-                                    <span>Time</span>
+                                    <span>{t('schedule.time-axis')}</span>
                                     <span className="block normal-case text-[9px] text-[#555] mt-0.5 truncate" title={Intl.DateTimeFormat().resolvedOptions().timeZone}>
                                         {Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, ' ')}
                                     </span>
@@ -288,11 +293,14 @@ const SchedulePage: React.FC = () => {
                             ) : isError ? (
                                 <div className="p-12 text-center text-[#ffb4ab] font-['Space_Grotesk'] tracking-widest uppercase">{t('common.error') || 'Error loading schedule'}</div>
                             ) : (
-                                <div className="relative grid grid-cols-8 grid-lines" style={{ height: '768px' }}>
-                                    {/* Y-Axis Time Labels */}
+                                <div className="relative grid grid-cols-8 grid-lines" style={{ height: `${SCHEDULE_GRID_HEIGHT_PX}px` }}>
+                                    {/* Y-Axis: hourly labels; events still position by real start/duration */}
                                     <div className="flex flex-col border-r border-white/10">
                                         {hoursArray.map((hour) => (
-                                            <div key={hour} className="h-8 px-2 flex items-center font-['Space_Grotesk'] text-[10px] text-[#919191]">
+                                            <div
+                                                key={hour}
+                                                className="flex h-8 items-center px-2 font-['Space_Grotesk'] text-[10px] text-[#919191]"
+                                            >
                                                 {String(hour).padStart(2, '0')}:00
                                             </div>
                                         ))}
@@ -322,29 +330,29 @@ const SchedulePage: React.FC = () => {
 
                                             return dayEvents.map(event => (
                                                 (() => {
-                                                    const isCompactEvent = getEventDurationHours(event) <= 1;
+                                                    const { topPx, heightPx, isShort } = getEventLayout(event);
+                                                    const isTightBlock = heightPx < 24;
                                                     return (
                                                 <div 
                                                     key={event.id}
                                                     onClick={() => setSelectedEvent(event)}
-                                                    className={`absolute w-[14.28%] flex flex-col cursor-pointer transition-colors z-10 border border-[#131313] hover:z-20 hover:border-white ${
-                                                        isCompactEvent ? 'p-1 justify-center' : 'p-2'
-                                                    }`}
+                                                    title={`${event.title} · ${format(event.startTime, 'HH:mm')} — ${format(event.endTime, 'HH:mm')}`}
+                                                    className="absolute box-border flex w-[14.28%] cursor-pointer items-center justify-center overflow-hidden border border-[#131313] px-1.5 transition-colors z-10 hover:z-20 hover:border-white"
                                                     style={{
-                                                        ...getEventStyle(event),
+                                                        top: `${topPx}px`,
+                                                        height: `${heightPx}px`,
                                                         left: leftPosition,
                                                         backgroundColor: event.id === selectedEvent?.id ? '#ffffff' : (event.color || '#e2e2e2'),
-                                                        color: '#000000'
+                                                        color: '#000000',
                                                     }}
                                                 >
-                                                    <span className="block font-['Space_Grotesk'] font-bold text-xs leading-tight uppercase truncate">
+                                                    <span
+                                                        className={`min-w-0 max-w-full truncate font-['Space_Grotesk'] font-bold uppercase leading-none ${
+                                                            isTightBlock || isShort ? 'text-[9px]' : 'text-xs'
+                                                        }`}
+                                                    >
                                                         {event.title}
                                                     </span>
-                                                    {!isCompactEvent && (
-                                                        <span className="font-['Space_Grotesk'] text-[9px] font-bold uppercase mt-1 opacity-70">
-                                                            {format(event.startTime, 'HH:mm')} — {format(event.endTime, 'HH:mm')}
-                                                        </span>
-                                                    )}
                                                 </div>
                                                     );
                                                 })()
@@ -364,7 +372,7 @@ const SchedulePage: React.FC = () => {
                                     {programMetadata?.logo && (
                                         <div className="mb-6 bg-[#000000] aspect-square overflow-hidden relative">
                                             <img 
-                                                src={`/images/logos/${programMetadata.logo}`} 
+                                                src={resolveProgramLogoSrc(String(programMetadata.logo))} 
                                                 alt={selectedEvent.title} 
                                                 className="w-full h-full object-cover"
                                             />
@@ -373,9 +381,9 @@ const SchedulePage: React.FC = () => {
 
                                     <div className="mb-6">
                                         <div className="flex justify-between items-start mb-2">
-                                            <span className="bg-white text-black font-['Space_Grotesk'] text-[10px] px-2 py-0.5 uppercase tracking-widest font-bold">Selected Program</span>
+                                            <span className="bg-white text-black font-['Space_Grotesk'] text-[10px] px-2 py-0.5 uppercase tracking-widest font-bold">{t('schedule.selected-program')}</span>
                                             <span className="font-['Space_Grotesk'] text-[10px] uppercase tracking-widest text-[#919191]">
-                                                {programMetadata ? '[ ARCHIVE AVL ]' : ''}
+                                                {programMetadata ? t('schedule.archive-available') : ''}
                                             </span>
                                         </div>
                                         <h2 className="font-['Space_Grotesk'] text-5xl font-black uppercase tracking-tighter leading-none mb-4 break-words">
@@ -386,7 +394,7 @@ const SchedulePage: React.FC = () => {
                                             
                                             {programMetadata?.talent && programMetadata.talent.length > 0 && (
                                                 <div>
-                                                    <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">Host</p>
+                                                    <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">{t('schedule.host')}</p>
                                                     <p className="font-['Space_Grotesk'] text-sm uppercase font-bold whitespace-nowrap overflow-hidden text-ellipsis">
                                                         {programMetadata.talent.join(', ')}
                                                     </p>
@@ -394,22 +402,22 @@ const SchedulePage: React.FC = () => {
                                             )}
                                             
                                             <div>
-                                                <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">Genre</p>
+                                                <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">{t('schedule.genre')}</p>
                                                 <p className="font-['Space_Grotesk'] text-sm uppercase font-bold">
-                                                    EXPERIMENTAL / {programMetadata?.genre || 'ALTERNATIVE'}
+                                                    {t('schedule.genre-default')}
                                                 </p>
                                             </div>
 
                                             <div>
-                                                <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">Time</p>
+                                                <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">{t('schedule.time')}</p>
                                                 <p className="font-['Space_Grotesk'] text-sm uppercase">
                                                     {format(selectedEvent.startTime, 'HH:mm')} — {format(selectedEvent.endTime, 'HH:mm')}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">Frequency</p>
+                                                <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase mb-1">{t('schedule.frequency')}</p>
                                                 <p className="font-['Space_Grotesk'] text-sm uppercase">
-                                                    WEEKLY ({format(selectedEvent.startTime, 'EEE')})
+                                                    {t('schedule.frequency-weekly', { day: format(selectedEvent.startTime, 'EEE') })}
                                                 </p>
                                             </div>
                                         </div>
@@ -428,7 +436,7 @@ const SchedulePage: React.FC = () => {
                                         {latestEpisode && (
                                             <section className="mt-8 border-t border-white/10 pt-6">
                                                 <p className="font-['Space_Grotesk'] text-[10px] text-[#919191] uppercase tracking-widest mb-2">
-                                                    Ultimo episodio disponible
+                                                    {t('schedule.latest-episode')}
                                                 </p>
                                                 <h3 className="font-['Space_Grotesk'] text-xl uppercase font-bold tracking-tighter mb-1">
                                                     {latestEpisode.title}
@@ -452,7 +460,7 @@ const SchedulePage: React.FC = () => {
                                                             className="border border-white/20 hover:bg-white/5"
                                                         />
                                                         <span className="text-[10px] uppercase tracking-widest text-[#919191]">
-                                                            {episodeIsPlaying ? 'Sonando' : 'Reproducir'}
+                                                            {episodeIsPlaying ? t('schedule.playing') : t('schedule.play')}
                                                         </span>
                                                     </div>
                                                 )}
@@ -469,7 +477,7 @@ const SchedulePage: React.FC = () => {
                                         <line x1="8" x2="8" y1="2" y2="6"/>
                                         <line x1="3" x2="21" y1="10" y2="10"/>
                                     </svg>
-                                    <p className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">Select a program to view details</p>
+                                    <p className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">{t('schedule.select-program')}</p>
                                 </div>
                             )}
                         </div>

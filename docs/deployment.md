@@ -63,45 +63,37 @@ Upload the contents of `dist/` to your static host.
 
 ## Editor en producción (Cloudflare Pages)
 
-El login con hash funciona en prod si configurás **variables del cliente** (build) y **secretos del servidor** (Functions):
+El editor usa **Supabase Auth** en el cliente y escribe directo a Postgres (RLS). Las Functions solo exponen secretos de traducción.
 
-### Variables de build (`VITE_*` en Cloudflare Pages)
-
-| Variable | Valor |
-|----------|--------|
-| `VITE_EDITOR_ENABLED` | `true` |
-| `VITE_EDITOR_SALT` | mismo salt que en local |
-| `VITE_EDITOR_PASSWORD_HASH` | hash SHA-256 de `salt+contraseña` |
-
-### Secretos de Functions (Settings → Environment variables, **no** expuestos al cliente)
+### Variables de build (`VITE_*`)
 
 | Variable | Uso |
 |----------|-----|
-| `EDITOR_PASSWORD_HASH` | mismo valor que `VITE_EDITOR_PASSWORD_HASH` (valida el token en `/__dev/editor/*`) |
-| `EDITOR_GITHUB_TOKEN` | PAT con permiso `repo` para commitear JSON e imágenes |
-| `EDITOR_GITHUB_REPO` | `owner/repo` (ej. `tu-org/radionudista-web`) |
-| `EDITOR_GIT_BRANCH` | `master` (prod directo; Cloudflare redeploy automático) |
-| `IA_ACCESS_KEY` / `IA_SECRET_KEY` | subida de episodios a Archive.org |
-| `IA_COLLECTION` | colección IA (ej. `opensource_audio`) |
-| `TRANSLATE_API_URL` / `TRANSLATE_API_KEY` | botón TRADUCIR del editor (opcional) |
-| `EDITOR_TRANSLATE_MONTHLY_CHAR_LIMIT` | límite mensual de caracteres traducidos |
+| `VITE_SUPABASE_URL` | URL del proyecto Supabase |
+| `VITE_SUPABASE_ANON_KEY` | clave anon (lectura pública + sesión editor) |
 
-Local y prod usan la **misma API** (`/__dev/editor/*`) y los mismos endpoints; local escribe en disco + git push, prod commitea vía GitHub API.
+### Secretos de Functions (no expuestos al cliente)
+
+| Variable | Uso |
+|----------|-----|
+| `SUPABASE_URL` | validar JWT del editor |
+| `SUPABASE_ANON_KEY` | validar JWT del editor |
+| `SUPABASE_SERVICE_ROLE_KEY` | cuota de traducción en `editor_translate_usage` |
+| `IA_ACCESS_KEY` / `IA_SECRET_KEY` | subida directa de audio a Archive.org |
+| `IA_COLLECTION` | colección IA (ej. `opensource_audio`) |
+| `TRANSLATE_API_URL` / `TRANSLATE_API_KEY` | botón TRADUCIR (opcional) |
+| `EDITOR_TRANSLATE_MONTHLY_CHAR_LIMIT` | límite mensual de caracteres |
 
 ### Comportamiento
 
-- **`/editor-login`** → login con contraseña (hash en cliente).
-- **Aceptar** → POST `/__dev/editor/save` → commit directo a GitHub (rama `master`).
-- No hay botón «Publicar GitHub» en prod (solo en local, para hacer `git push` tras guardar en disco).
+- **`/editor-login`** → email + contraseña Supabase Auth.
+- **Guardar / Aceptar** → upsert directo en Supabase (visible al instante, sin redeploy).
+- **Imágenes** → Supabase Storage (`program-logos`, `episode-covers`). Ejecutar una vez [`scripts/supabase-storage-setup.sql`](../scripts/supabase-storage-setup.sql) en el SQL Editor del proyecto.
+- **Audio de episodios** → MP3 directo a Archive.org desde el navegador (`prepare-archive-audio-upload` + PUT a `s3.us.archive.org`).
+- **`POST /__dev/editor/prepare-archive-audio-upload`** — permiso para subir MP3 directo a Archive.org (JWT editor)
+- **`POST /__dev/editor/translate-text`** → requiere `Authorization: Bearer <jwt>`.
 
-En **local** (`npm run dev`), el plugin Vite escribe en disco; **Publicar GitHub** hace el push. En **prod**, cada **Aceptar** ya commitea a GitHub (no hay disco intermedio).
-
-### Publicación automática a producción (`master`)
-
-1. Configurá los secretos anteriores en Cloudflare con `EDITOR_GIT_BRANCH=master`.
-2. El PAT de `EDITOR_GITHUB_TOKEN` debe poder **escribir en `master`** (usuario admin o bypass del ruleset «prod env»).
-3. Cada guardado commitea a `master` → Cloudflare Pages rebuilda → cambios visibles en radionudista.com (~1–3 min).
-4. GitHub Actions valida frontmatter/build en push a `master` (avisos si algo falla; el deploy ya puede estar en curso).
+El audio se convierte a **MP3 en el navegador** y se sube **directo a Archive.org** (un salto, sin pasar el archivo por la Function).
 
 ---
 For more, see [Usage & Build](./usage.md) and [Environment Variables](./environment-variables.md).

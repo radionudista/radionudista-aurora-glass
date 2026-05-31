@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { env } from '../config/env';
-import { validatePassword, editorAuth, hashPassword } from '../utils/editorAuth';
-import { devEditorAuth, devEditorService } from '../services/devEditorService';
+import { getSupabaseClient, isEditorAvailable } from '../lib/supabaseClient';
 import { FormContainer, FormField, FormInput, FormButton } from '../components/ui/FormComponents';
 import { FALLBACK_LOGO } from '../hooks/useLiveProgram';
 
@@ -10,15 +9,16 @@ const HOME_HERO_LOGO = FALLBACK_LOGO;
 
 const EditorLoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (!env.EDITOR_ENABLED || !env.EDITOR_PASSWORD_HASH || !env.EDITOR_SALT) {
+  if (!isEditorAvailable()) {
     return (
       <div className="min-h-screen w-full bg-black flex items-center justify-center px-6">
         <p className="text-white/60 font-mono text-sm text-center max-w-md">
-          El editor no está habilitado en este entorno.
+          Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.
         </p>
       </div>
     );
@@ -26,31 +26,25 @@ const EditorLoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim()) {
-      setError('Ingresá la contraseña.');
+    if (!email.trim() || !password.trim()) {
+      setError('Ingresá email y contraseña.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const ok = await validatePassword(password, env.EDITOR_PASSWORD_HASH, env.EDITOR_SALT);
-      if (!ok) {
-        setError('Contraseña inválida.');
-        setPassword('');
-        setLoading(false);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setError('Supabase no configurado.');
         return;
       }
-      editorAuth.createSession();
-      const apiToken = await hashPassword(password, env.EDITOR_SALT);
-      devEditorAuth.setToken(apiToken);
-      try {
-        await devEditorService.getStatus();
-      } catch {
-        editorAuth.clearSession();
-        devEditorAuth.clearToken();
-        setError('El backend del editor no responde. En prod configurá Cloudflare Functions + GitHub.');
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (signInError) {
+        setError(signInError.message || 'Credenciales inválidas.');
         setPassword('');
-        setLoading(false);
         return;
       }
       navigate(`/${env.DEFAULT_LANGUAGE}`, { replace: true });
@@ -82,14 +76,24 @@ const EditorLoginPage: React.FC = () => {
             Acceso Editor
           </h2>
           <FormContainer onSubmit={handleSubmit}>
-            <FormField label="Contraseña" error={error} required>
+            <FormField label="Email" error={error && !email.trim() ? error : undefined} required>
+              <FormInput
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@radionudista.com"
+                error={!!error && !email.trim()}
+                autoFocus
+                disabled={loading}
+              />
+            </FormField>
+            <FormField label="Contraseña" error={error && email.trim() ? error : undefined} required>
               <FormInput
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                error={!!error}
-                autoFocus
+                error={!!error && !!email.trim()}
                 disabled={loading}
               />
             </FormField>

@@ -1,5 +1,6 @@
 import { env } from '../config/env';
-import { CoverImageService, ICoverImageService } from './coverImageService';
+import { CoverImageService, type ICoverImageService } from './coverImageService';
+import { logger } from '../utils/logger';
 
 /**
  * Stream Service Interface
@@ -63,6 +64,7 @@ export class RadioStreamService implements IStreamService {
   private radioInfoCache: RadioInfo | null = null;
   private readonly radioInfoUrl: string;
   private readonly coverImageService: ICoverImageService;
+  private lastStatusErrorLoggedAt = 0;
 
   constructor(
     private readonly statusUrl: string,
@@ -77,7 +79,7 @@ export class RadioStreamService implements IStreamService {
 
   async fetchCurrentTrack(): Promise<string> {
     try {
-      const response = await fetch(this.statusUrl);
+      const response = await fetch(this.statusUrl, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -85,7 +87,11 @@ export class RadioStreamService implements IStreamService {
       const data: StreamStatus = await response.json();
       return data.currentTrack || this.defaultTrack;
     } catch (error) {
-      console.error('Error fetching track info:', error);
+      const now = Date.now();
+      if (now - this.lastStatusErrorLoggedAt > 60_000) {
+        this.lastStatusErrorLoggedAt = now;
+        logger.debug('Radio status fetch failed', error);
+      }
       return this.defaultTrack;
     }
   }
@@ -106,7 +112,7 @@ export class RadioStreamService implements IStreamService {
       this.radioInfoCache = data;
       return data;
     } catch (error) {
-      console.error('Error fetching radio info:', error);
+      logger.debug('Error fetching radio info', error);
       return null;
     }
   }

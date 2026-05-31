@@ -1,49 +1,27 @@
 import {
-  contentIndexSchema,
-  editorialSchema,
-  programEpisodesSchema,
   programEpisodesTrashSchema,
   type ContentIndexData,
   type EditorialData,
   type ProgramEpisodesData,
   type ProgramEpisodesTrashData,
 } from '../editor/contracts';
-
-export interface SavePayload {
-  contentIndex?: ContentIndexData;
-  editorial?: EditorialData;
-  episodesByProgram?: Record<string, ProgramEpisodesData>;
-  episodesTrashByProgram?: Record<string, ProgramEpisodesTrashData>;
-}
-
-interface DevEditorResponse {
-  ok: boolean;
-  message: string;
-}
-
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-export interface UploadImageResponse extends DevEditorResponse {
-  logoFileName?: string;
-  coverPublicPath?: string;
-}
-
-export interface UploadEpisodeAudioToArchiveResponse extends DevEditorResponse {
-  identifier?: string;
-  audioUrl?: string;
-  itemUrl?: string;
-  fileName?: string;
-}
+import { getSupabaseAccessToken } from '../lib/supabaseClient';
+import {
+  fetchContentIndexFromSupabase,
+  fetchEditorContentIndexFromSupabase,
+  fetchEditorialFromSupabase,
+  fetchEpisodesByProgramFromSupabase,
+  fetchProgramEpisodesBundleFromSupabase,
+  fetchTrashEpisodesByProgramFromSupabase,
+  isSupabaseConfigured,
+} from './supabaseContentService';
 
 export interface CreateProgramPayload {
   id: string;
   titleEs: string;
   titlePt: string;
   schedule?: string;
-}
-
-export interface CreateProgramResponse extends DevEditorResponse {
-  programId?: string;
+  contentKind?: 'program' | 'event';
 }
 
 export interface DeleteProgramPayload {
@@ -51,11 +29,29 @@ export interface DeleteProgramPayload {
   confirmText: string;
 }
 
-export interface DeleteProgramResponse extends DevEditorResponse {
-  programId?: string;
+export interface PrepareArchiveAudioUploadResponse {
+  ok: boolean;
+  message: string;
+  identifier?: string;
+  audioUrl?: string;
+  itemUrl?: string;
+  fileName?: string;
+  putUrl?: string;
+  uploadHeaders?: Record<string, string>;
 }
 
-export interface TranslateTextResponse extends DevEditorResponse {
+export interface UploadEpisodeAudioToArchiveResponse {
+  ok: boolean;
+  message: string;
+  identifier?: string;
+  audioUrl?: string;
+  itemUrl?: string;
+  fileName?: string;
+}
+
+export interface TranslateTextResponse {
+  ok: boolean;
+  message: string;
   month: string;
   usedChars: number;
   remainingChars: number;
@@ -65,39 +61,24 @@ export interface TranslateTextResponse extends DevEditorResponse {
   };
 }
 
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const utf8ToBase64 = (text: string): string => {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+  return btoa(binary);
+};
+
 const parseJson = async <T>(response: Response): Promise<T> => {
   const data = await response.json();
   return data as T;
 };
 
-const EDITOR_TOKEN_STORAGE_KEY = 'rn_editor_dev_token';
-
-let editorToken =
-  typeof window !== 'undefined' ? window.localStorage.getItem(EDITOR_TOKEN_STORAGE_KEY) : null;
-
-const isEditorEndpoint = (url: string) => url.startsWith('/__dev/editor');
-
-export const devEditorAuth = {
-  hasToken: () => Boolean(editorToken),
-  setToken: (token: string) => {
-    editorToken = token.trim();
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(EDITOR_TOKEN_STORAGE_KEY, editorToken);
-    }
-  },
-  clearToken: () => {
-    editorToken = null;
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(EDITOR_TOKEN_STORAGE_KEY);
-    }
-  },
-};
-
 const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
+  const token = await getSupabaseAccessToken();
   const headers = new Headers(init?.headers);
-  if (isEditorEndpoint(url) && editorToken) {
-    headers.set('X-Editor-Token', editorToken);
-  }
+  if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const response = await fetch(url, { ...init, headers });
   if (!response.ok) {
@@ -107,10 +88,7 @@ const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
       const parsed = JSON.parse(raw) as { message?: string };
       if (parsed?.message) message = parsed.message;
     } catch {
-      // Keep raw text message
-    }
-    if (isEditorEndpoint(url) && (response.status === 401 || response.status === 403)) {
-      devEditorAuth.clearToken();
+      // keep raw
     }
     throw new Error(message || `Request failed for ${url}`);
   }
@@ -118,41 +96,7 @@ const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
 };
 
 export class DevEditorService {
-  public async getStatus(): Promise<{ enabled: boolean; branch: string; hasChanges: boolean }> {
-    return requestJson('/__dev/editor/status');
-  }
-
-  public async save(payload: SavePayload): Promise<DevEditorResponse> {
-    return requestJson('/__dev/editor/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  public async publish(payload: SavePayload): Promise<DevEditorResponse> {
-    return requestJson('/__dev/editor/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  public async uploadImage(payload: {
-    scope: 'program-logo' | 'episode-cover';
-    programId: string;
-    episodeId?: string;
-    mimeType: string;
-    dataBase64: string;
-  }): Promise<UploadImageResponse> {
-    return requestJson('/__dev/editor/upload-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  public async uploadEpisodeAudioToArchive(payload: {
+  public async prepareArchiveAudioUpload(payload: {
     programId: string;
     episodeId: string;
     episodeTitle: string;
@@ -161,29 +105,58 @@ export class DevEditorService {
     tags?: string[];
     mimeType: string;
     fileName: string;
-    dataBase64: string;
-  }): Promise<UploadEpisodeAudioToArchiveResponse> {
-    return requestJson('/__dev/editor/upload-episode-audio', {
+    fileSizeBytes: number;
+  }): Promise<PrepareArchiveAudioUploadResponse> {
+    return requestJson('/__dev/editor/prepare-archive-audio-upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
   }
 
-  public async createProgram(payload: CreateProgramPayload): Promise<CreateProgramResponse> {
-    return requestJson('/__dev/editor/create-program', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+  public async uploadEpisodeAudioProxy(
+    payload: {
+      programId: string;
+      episodeId: string;
+      date?: string;
+      fileName: string;
+    },
+    file: File | Blob
+  ): Promise<UploadEpisodeAudioToArchiveResponse> {
+    const token = await getSupabaseAccessToken();
+    const metaB64 = utf8ToBase64(
+      JSON.stringify({
+        programId: payload.programId,
+        episodeId: payload.episodeId,
+        date: payload.date || '',
+        fileName: payload.fileName,
+      })
+    );
+    const headers = new Headers({
+      'Content-Type': 'audio/mpeg',
+      'X-Upload-Meta': metaB64,
     });
-  }
+    if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  public async deleteProgram(payload: DeleteProgramPayload): Promise<DeleteProgramResponse> {
-    return requestJson('/__dev/editor/delete-program', {
+    const response = await fetch('/__dev/editor/upload-episode-audio-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers,
+      body: file,
     });
+
+    if (!response.ok) {
+      const raw = await response.text();
+      let message = raw;
+      try {
+        const parsed = JSON.parse(raw) as { message?: string };
+        if (parsed?.message) message = parsed.message;
+      } catch {
+        // keep raw
+      }
+      throw new Error(message || 'Error al subir audio a Archive.org.');
+    }
+
+    return parseJson<UploadEpisodeAudioToArchiveResponse>(response);
   }
 
   public async translateText(payload: {
@@ -199,38 +172,46 @@ export class DevEditorService {
   }
 
   public async fetchContentIndex(): Promise<ContentIndexData> {
-    const data = await requestJson<unknown>('/contentIndex.json');
-    return contentIndexSchema.parse(data);
+    if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+    const data = await fetchEditorContentIndexFromSupabase();
+    if (!data) throw new Error('No hay contenido en Supabase.');
+    return data;
   }
 
   public async fetchEditorial(): Promise<EditorialData> {
-    const data = await requestJson<unknown>('/editor/home-about-contact.json');
-    return editorialSchema.parse(data);
+    if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+    const data = await fetchEditorialFromSupabase();
+    if (!data) throw new Error('No hay contenido editorial en Supabase.');
+    return data;
   }
 
-  public async fetchProgramEpisodes(programId: string): Promise<ProgramEpisodesData> {
-    if (!SLUG_RE.test(programId)) {
-      throw new Error('ID de programa inválido.');
-    }
-    const data = await requestJson<unknown>(`/episodes/${programId}.json`);
-    return programEpisodesSchema.parse(data);
+  public async fetchProgramEpisodesBundle(programId: string, lang: import('../editor/contracts').EditorLanguage = 'es') {
+    if (!SLUG_RE.test(programId)) throw new Error('ID de programa inválido.');
+    if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+    return fetchProgramEpisodesBundleFromSupabase(programId, lang);
   }
 
-  public async fetchProgramTrashEpisodes(programId: string): Promise<ProgramEpisodesTrashData> {
-    if (!SLUG_RE.test(programId)) {
-      throw new Error('ID de programa inválido.');
-    }
-    const response = await fetch(`/episodes/trash/${programId}.json`);
-    if (response.status === 404) {
-      return { programId, episodes: [] };
-    }
-    if (!response.ok) {
-      const raw = await response.text();
-      throw new Error(raw || `Request failed for /episodes/trash/${programId}.json`);
-    }
-    const data = (await response.json()) as unknown;
+  public async fetchProgramEpisodes(
+    programId: string,
+    lang: import('../editor/contracts').EditorLanguage = 'es'
+  ): Promise<ProgramEpisodesData> {
+    if (!SLUG_RE.test(programId)) throw new Error('ID de programa inválido.');
+    if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+    const data = await fetchEpisodesByProgramFromSupabase(programId, lang);
+    return data ?? { programId, episodes: [] };
+  }
+
+  public async fetchProgramTrashEpisodes(
+    programId: string,
+    lang: import('../editor/contracts').EditorLanguage = 'es'
+  ): Promise<ProgramEpisodesTrashData> {
+    if (!SLUG_RE.test(programId)) throw new Error('ID de programa inválido.');
+    if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+    const data = await fetchTrashEpisodesByProgramFromSupabase(programId, lang);
     return programEpisodesTrashSchema.parse(data);
   }
 }
 
 export const devEditorService = new DevEditorService();
+
+export const fetchPublicContentIndex = fetchContentIndexFromSupabase;

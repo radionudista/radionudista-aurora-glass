@@ -11,8 +11,8 @@ import { useContentIndexData } from '../hooks/useEditorContent';
 import { mapRouteToContentIndexLanguage, resolveContentIndexEntry } from '../utils/contentLanguage';
 import { useRouteLanguage } from '../hooks/useRouteLanguage';
 import MediaButton from './ui/MediaButton';
-import EditorPublishBar from './EditorPublishBar';
 import { useOptionalEditor } from '../contexts/EditorContext';
+import { isEditorAvailable } from '../lib/supabaseClient';
 
 interface NavigationItem {
   id: string;
@@ -48,6 +48,7 @@ const Navigation: React.FC<NavigationProps> = ({
     { id: 'program', label: 'archivo', path: 'programacion' },
     { id: 'schedule', label: 'programacion', path: 'schedule' },
     { id: 'about', label: 'about', path: 'about' },
+    { id: 'contact', label: 'contact', path: 'contacto' },
   ],
 }) => {
     const { t } = useTranslation();
@@ -57,7 +58,7 @@ const Navigation: React.FC<NavigationProps> = ({
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  // --- Dynamic nav items from indexed content (contentIndex.json) ---
+  // --- Dynamic nav items from Supabase content index ---
   const supportedLangs = env.SUPPORTED_LANGUAGES;
   const currentLang = getCurrentLang(location.pathname, supportedLangs);
   const routeLang = useRouteLanguage();
@@ -74,19 +75,16 @@ const Navigation: React.FC<NavigationProps> = ({
     return `/${item.path}`;
   };
 
-  // No fetch needed; contentIndex.json is imported as a module
+  // Loaded via PublicContentProvider / useContentIndexData
 
   const dynamicNavItems: NavigationItem[] = useMemo(() => {
-    // Collect all public, menu'd items for current language
     const items: NavigationItem[] = [];
-    const staticRouteIds = new Set(['acerca-de-nosotros']);
     Object.entries(contentIndex).forEach(([id, langs]) => {
       const entry = resolveContentIndexEntry<Record<string, unknown>>(langs, contentLang);
       if (
         entry &&
         entry.menu &&
-        (entry.public === true || entry.public === 'true') &&
-        !staticRouteIds.has(id)
+        (entry.public === true || entry.public === 'true')
       ) {
         items.push({
           id: `${id}-${currentLang}`,
@@ -117,9 +115,14 @@ const Navigation: React.FC<NavigationProps> = ({
   // Orden: Radio → Archivos → Schedule → Nosotrxs, luego entradas extra del índice
   const mergedNavItems = [...translatedNavItems, ...translatedPostNavItems, ...dynamicNavItems];
   const primaryNavItems = mergedNavItems.filter(
-    (item) => item.id === 'home' || item.id === 'about' || item.id === 'program' || item.id === 'schedule'
+    (item) =>
+      item.id === 'home' ||
+      item.id === 'about' ||
+      item.id === 'contact' ||
+      item.id === 'program' ||
+      item.id === 'schedule'
   );
-  const liveText = audio.currentTrack || 'TRANSMITTING...';
+  const liveText = audio.currentTrack || t('navigation.transmitting');
   const { containerRef, textRef } = useNewsTicker({
     text: liveText,
     isActive: true,
@@ -138,6 +141,9 @@ const Navigation: React.FC<NavigationProps> = ({
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  const showEditorLogin =
+    isEditorAvailable() && !editor?.enabled && location.pathname !== '/editor-login';
 
   const openMobileMenu = () => {
     setIsMobileMenuOpen(true);
@@ -204,16 +210,31 @@ const Navigation: React.FC<NavigationProps> = ({
               </Link>
             );
           })}
+          {showEditorLogin && (
+            <Link
+              to="/editor-login"
+              className="shrink-0 border border-white/30 px-2.5 py-1 text-[10px] uppercase tracking-widest text-white/70 transition hover:border-white hover:text-white"
+            >
+              {t('navigation.login')}
+            </Link>
+          )}
           {editor?.enabled && (
             <div className="flex shrink-0 items-center gap-3">
-              <EditorPublishBar />
+              {editor.message ? (
+                <p
+                  className="hidden max-w-[14rem] truncate text-[10px] leading-snug text-lime-300/80 xl:block"
+                  title={editor.message}
+                >
+                  {editor.message}
+                </p>
+              ) : null}
               <button
                 type="button"
-                onClick={() => { editor.logout(); }}
+                onClick={() => { void editor.logout(); }}
                 className="shrink-0 border border-red-400/40 bg-transparent px-2.5 py-1 text-[10px] uppercase tracking-widest text-red-400/70 transition hover:border-red-400/70 hover:text-red-400"
-                title="Cerrar sesión editor"
+                title={t('navigation.logout-editor')}
               >
-                Cerrar editor
+                {t('navigation.logout-editor')}
               </button>
             </div>
           )}
@@ -298,17 +319,26 @@ const Navigation: React.FC<NavigationProps> = ({
                 );
               })}
 
-              {/* Mobile menu keeps links-only to reduce noise */}
-              {editor?.enabled && (
+              {(showEditorLogin || editor?.enabled) && (
                 <div className="space-y-3 border-t border-white/10 pt-4">
-                  <EditorPublishBar className="w-full [&>button]:w-full" />
-                  <button
-                    type="button"
-                    onClick={() => { handleMobileNavClick(); editor.logout(); }}
-                    className="block w-full border border-red-400/40 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-red-400/70 transition hover:border-red-400/70 hover:text-red-400"
-                  >
-                    Cerrar editor
-                  </button>
+                  {showEditorLogin && (
+                    <Link
+                      to="/editor-login"
+                      onClick={handleMobileNavClick}
+                      className="block w-full border border-white/30 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-white/75 transition hover:border-white hover:text-white"
+                    >
+                      {t('navigation.login')}
+                    </Link>
+                  )}
+                  {editor?.enabled && (
+                    <button
+                      type="button"
+                      onClick={() => { handleMobileNavClick(); void editor.logout(); }}
+                      className="block w-full border border-red-400/40 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-red-400/70 transition hover:border-red-400/70 hover:text-red-400"
+                    >
+                      {t('navigation.logout-editor')}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

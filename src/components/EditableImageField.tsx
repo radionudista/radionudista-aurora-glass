@@ -1,6 +1,6 @@
 import React from 'react';
 import InlineEditableText from './InlineEditableText';
-import { devEditorService } from '../services/devEditorService';
+import { editorSupabaseService } from '../services/editorSupabaseService';
 
 export interface EditableImageFieldProps {
   label: string;
@@ -11,6 +11,8 @@ export interface EditableImageFieldProps {
   programId: string;
   episodeId?: string;
   onCommit: (nextValue: string) => Promise<void>;
+  /** Tras subir archivo: DB ya actualizada en uploadImage; evita re-guardar todo el índice. */
+  onAfterFileUpload?: (url: string, message: string) => Promise<void>;
   helpText?: string;
 }
 
@@ -30,10 +32,18 @@ const EditableImageField: React.FC<EditableImageFieldProps> = ({
   programId,
   episodeId,
   onCommit,
+  onAfterFileUpload,
   helpText,
 }) => {
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
+  const [previewOverride, setPreviewOverride] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setPreviewOverride(null);
+  }, [previewSrc]);
+
+  const displaySrc = previewOverride ?? previewSrc;
 
   const onPickFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,21 +54,31 @@ const EditableImageField: React.FC<EditableImageFieldProps> = ({
       setErr('Usa PNG, JPEG o WebP.');
       return;
     }
+
+    const blobPreview = URL.createObjectURL(file);
+    setPreviewOverride(blobPreview);
     setBusy(true);
     try {
       const dataBase64 = await fileToDataUrl(file);
-      const res = await devEditorService.uploadImage({
+      const res = await editorSupabaseService.uploadImage({
         scope: uploadScope,
         programId,
         episodeId,
         mimeType: file.type,
         dataBase64,
       });
-      if (res.logoFileName) await onCommit(res.logoFileName);
-      else if (res.coverPublicPath) await onCommit(res.coverPublicPath);
+      if (!res.coverPublicPath) throw new Error('No se recibió URL de la imagen.');
+      if (onAfterFileUpload) {
+        await onAfterFileUpload(res.coverPublicPath, res.message);
+      } else {
+        await onCommit(res.coverPublicPath);
+      }
+      setPreviewOverride(`${res.coverPublicPath}${res.coverPublicPath.includes('?') ? '&' : '?'}v=${Date.now()}`);
     } catch (er) {
+      setPreviewOverride(null);
       setErr(er instanceof Error ? er.message : 'Error al subir');
     } finally {
+      URL.revokeObjectURL(blobPreview);
       setBusy(false);
     }
   };
@@ -67,7 +87,12 @@ const EditableImageField: React.FC<EditableImageFieldProps> = ({
     <div className="space-y-2 border border-white/20 bg-black/80 p-3 text-white">
       <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/55">{label}</p>
       <div className="relative aspect-video w-full max-h-36 overflow-hidden border border-white/15 bg-black/50">
-        <img src={previewSrc} alt="" className="h-full w-full object-contain object-center" />
+        <img
+          key={displaySrc}
+          src={displaySrc}
+          alt=""
+          className="h-full w-full object-contain object-center"
+        />
       </div>
       <label className="block">
         <span className="sr-only">Subir imagen</span>

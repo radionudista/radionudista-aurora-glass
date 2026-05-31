@@ -9,22 +9,28 @@ import type { Episode } from '../types';
 import NotFound from './NotFound';
 import { accentCssFromHue, extractProgramAccentHue } from '../utils/imageAccent';
 import { resolveCoverSrc } from '../utils/episodeCover';
+import { resolveProgramLogoSrc } from '../utils/programLogo';
 import { PAGE_SCREEN_TITLE_CLASS } from '../constants/layoutConstants';
 import { useContentIndexData } from '../hooks/useEditorContent';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import { useArchivePlayer } from '../contexts/ArchivePlayerContext';
+import { uploadEpisodeAudioDirectToArchive } from '../services/episodeArchiveUploadService';
 import EditableImageField from '../components/EditableImageField';
 import EditableStringListItem from '../components/EditableStringListItem';
 import InlineEditableText from '../components/InlineEditableText';
 import { mapRouteToContentIndexLanguage, resolveContentIndexEntry, resolveContentIndexString } from '../utils/contentLanguage';
 import { useRouteLanguage } from '../hooks/useRouteLanguage';
-import { devEditorService } from '../services/devEditorService';
 import {
   formatProgramScheduleForViewer,
   isEpisodeReleased,
   isProgramScheduleMeta,
   type ProgramScheduleMeta,
 } from '../utils/programSchedule';
+import {
+  getEpisodeChronologicalSlot,
+  isValidEpisodeDateIso,
+  sortEpisodesChronologicallyDesc,
+} from '../utils/episodeOrder';
 
 interface ProgramMetadata {
   id: string;
@@ -84,6 +90,12 @@ const EpisodeDetailPage: React.FC = () => {
         if (!candidate || candidate.component !== 'ProgramPage') continue;
         if (candidate.public !== true && candidate.public !== 'true') continue;
         if (
+          (candidate as { content_kind?: string }).content_kind === 'event' &&
+          !editor?.enabled
+        ) {
+          continue;
+        }
+        if (
           normalize(candidate.id) !== target
           && normalize(candidate.slug) !== target
           && normalize(key) !== target
@@ -104,21 +116,21 @@ const EpisodeDetailPage: React.FC = () => {
     }
 
     return null;
-  }, [contentIndex, contentLang, routeProgramId]);
+  }, [contentIndex, contentLang, routeProgramId, editor?.enabled]);
 
   const archiveProgramId = program?.id ?? '';
 
   const { data: archiveData, isLoading, isError } = useQuery({
-    queryKey: ['program-episodes', archiveProgramId],
-    queryFn: () => episodeService.getEpisodesByProgram(archiveProgramId),
-    enabled: Boolean(program?.id),
+    queryKey: ['program-episodes', archiveProgramId, contentLang],
+    queryFn: () => episodeService.getEpisodesByProgram(archiveProgramId, contentLang),
+    enabled: Boolean(program?.id) && !editor?.enabled,
   });
 
   React.useEffect(() => {
     if (editor?.enabled && archiveProgramId) {
       void editor.loadEpisodes(archiveProgramId);
     }
-  }, [archiveProgramId, editor]);
+  }, [archiveProgramId, editor?.enabled, editor?.loadEpisodes]);
 
   const activeArchiveData = React.useMemo(() => {
     if (!archiveProgramId) return archiveData;
@@ -135,19 +147,12 @@ const EpisodeDetailPage: React.FC = () => {
     ) ?? null;
   }, [activeArchiveData, routeEpisodeId]);
 
-  const sortedEpisodes = useMemo(() => {
-    const list = activeArchiveData?.episodes ?? [];
-    return [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [activeArchiveData]);
-
   const episodeSlot = useMemo(() => {
-    if (!episode) return null;
-    const idx = sortedEpisodes.findIndex((e) => e.id === episode.id);
-    if (idx < 0) return null;
-    return { n: idx + 1, total: sortedEpisodes.length };
-  }, [episode, sortedEpisodes]);
+    if (!episode || !activeArchiveData?.episodes?.length) return null;
+    return getEpisodeChronologicalSlot(episode, activeArchiveData.episodes);
+  }, [episode, activeArchiveData?.episodes]);
 
-  const logoSrc = program?.logo ? `/images/logos/${program.logo}` : null;
+  const logoSrc = program?.logo ? resolveProgramLogoSrc(program.logo) : null;
 
   useEffect(() => {
     if (!logoSrc) {
@@ -244,7 +249,7 @@ const EpisodeDetailPage: React.FC = () => {
     ? episode.collaborators
     : (program.talent ?? []);
   const talentLine = effectiveCollaborators.length ? effectiveCollaborators.join(' · ') : null;
-  const programExcerpt = program.content?.replace(/\s+/g, ' ').trim().slice(0, 320);
+  const episodeDescription = (episode.description ?? '').trim();
   const scheduleLabel = isProgramScheduleMeta(program.schedule_meta)
     ? formatProgramScheduleForViewer(program.schedule_meta, new Date(), i18n.language || 'es')
     : program.schedule;
@@ -267,54 +272,29 @@ const EpisodeDetailPage: React.FC = () => {
           nextTags.map((item) => item.trim()).filter(Boolean)
         )
       : Promise.resolve();
+
   const handleUploadEpisodeAudio = async (file: File) => {
-    if (!editor?.enabled) return;
+    if (!editor?.enabled || !program || !episode) return;
     const mimeType = file.type || 'audio/mpeg';
-    if (!mimeType.startsWith('audio/')) {
+    if (!mimeType.startsWith('audio/') && !/\.(wav|flac|mp3|m4a)$/i.test(file.name)) {
       setUploadMessage('Selecciona un archivo de audio válido.');
       return;
     }
     setUploadingAudio(true);
-    setUploadMessage('Subiendo audio a Archive.org...');
+    setUploadMessage('Preparando audio...');
     try {
-      const dataBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error('No se pudo leer el archivo de audio.'));
-        reader.onload = () => {
-          const result = typeof reader.result === 'string' ? reader.result : '';
-          const parts = result.split(',');
-          if (parts.length < 2) {
-            reject(new Error('Formato de archivo inválido.'));
-            return;
-          }
-          resolve(parts[1]);
-        };
-        reader.readAsDataURL(file);
-      });
-      const response = await devEditorService.uploadEpisodeAudioToArchive({
+      const upload = await uploadEpisodeAudioDirectToArchive({
         programId: program.id,
         episodeId: episode.id,
-        episodeTitle: episode.title,
         date: episode.date,
-        description: episode.description,
-        tags: episodeTags,
-        mimeType,
-        fileName: file.name,
-        dataBase64,
+        file,
+        onStatus: setUploadMessage,
       });
-
-      if (!response.ok || !response.audioUrl) {
-        throw new Error(response.message || 'No se obtuvo URL de audio.');
-      }
-
-      await editor.commitEpisodeField(program.id, episode.id, 'audioUrl', response.audioUrl);
-      if (response.identifier) {
-        await editor.commitEpisodeField(program.id, episode.id, 'archiveIdentifier', response.identifier);
-      }
-      setUploadMessage(`Audio subido correctamente (${response.identifier ?? 'archive'}).`);
+      await editor.commitEpisodeField(program.id, episode.id, 'audioUrl', upload.audioUrl);
+      await editor.commitEpisodeField(program.id, episode.id, 'archiveIdentifier', upload.identifier);
+      setUploadMessage(upload.message);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconocido al subir audio.';
-      setUploadMessage(message);
+      setUploadMessage(error instanceof Error ? error.message : 'Error al subir audio.');
     } finally {
       setUploadingAudio(false);
     }
@@ -360,8 +340,25 @@ const EpisodeDetailPage: React.FC = () => {
               </h1>
             )}
 
-            <div className="mt-4 inline-flex max-w-full items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-white/50">
-              <span>{dateFormatter.format(new Date(`${episode.date}T12:00:00`))}</span>
+            <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-white/50">
+              {editor?.enabled ? (
+                <InlineEditableText
+                  as="span"
+                  className="!w-auto"
+                  value={episode.date}
+                  displayValue={dateFormatter.format(new Date(`${episode.date}T12:00:00`))}
+                  textClassName="font-mono text-xs uppercase tracking-[0.2em] text-white/50"
+                  onCommit={async (next) => {
+                    const normalized = next.trim();
+                    if (!isValidEpisodeDateIso(normalized)) {
+                      throw new Error(t('episode-detail.date-invalid'));
+                    }
+                    await editor.commitEpisodeField(program.id, episode.id, 'date', normalized);
+                  }}
+                />
+              ) : (
+                <span>{dateFormatter.format(new Date(`${episode.date}T12:00:00`))}</span>
+              )}
               <span className="text-white/25">·</span>
               <span>{t('episode-detail.duration')}</span>
               <span className="text-white/25">:</span>
@@ -376,21 +373,6 @@ const EpisodeDetailPage: React.FC = () => {
                 <span>{episode.duration}</span>
               )}
             </div>
-
-            {(editor?.enabled || episode.description) && (
-              <div className="mt-8 max-w-2xl font-['Space_Grotesk'] text-base leading-relaxed text-white/75 md:text-lg">
-                {editor?.enabled ? (
-                  <InlineEditableText
-                    value={episode.description ?? ''}
-                    multiline
-                    textClassName="font-['Space_Grotesk'] text-base leading-relaxed text-white/75 md:text-lg"
-                    onCommit={(next) => editor.commitEpisodeField(program.id, episode.id, 'description', next)}
-                  />
-                ) : (
-                  episode.description
-                )}
-              </div>
-            )}
 
             {(editor?.enabled || episodeTags.length > 0) && (
               <div className="mt-6 max-w-2xl">
@@ -460,6 +442,7 @@ const EpisodeDetailPage: React.FC = () => {
 
             <div className="mt-12 border-t border-white/10 pt-8">
               <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--program-accent-soft)]">
+                {t('episode-detail.program-section')}
               </p>
               <p className="mt-3 font-['Space_Grotesk'] text-xl font-bold uppercase tracking-tight text-white">
                 {program.title}
@@ -507,11 +490,28 @@ const EpisodeDetailPage: React.FC = () => {
                   )}
                 </p>
               )}
-              {programExcerpt && (
-                <p className="mt-4 line-clamp-5 font-['Space_Grotesk'] text-sm leading-relaxed text-white/60">
-                  {programExcerpt}
-                  {program.content && program.content.length > 320 ? '…' : ''}
-                </p>
+              {(editor?.enabled || episodeDescription) && (
+                <div className="mt-4 max-w-2xl">
+                  {editor?.enabled ? (
+                    <p className="font-mono text-[10px] text-white/35">
+                      {t('episode-detail.description-placeholder')}
+                    </p>
+                  ) : null}
+                  <div className="mt-2 font-['Space_Grotesk'] text-sm leading-relaxed text-white/75 md:text-base">
+                    {editor?.enabled ? (
+                      <InlineEditableText
+                        value={episode.description ?? ''}
+                        multiline
+                        textClassName="font-['Space_Grotesk'] text-sm leading-relaxed text-white/75 md:text-base"
+                        onCommit={(next) =>
+                          editor.commitEpisodeField(program.id, episode.id, 'description', next)
+                        }
+                      />
+                    ) : (
+                      episodeDescription
+                    )}
+                  </div>
+                </div>
               )}
               {programDetailPath && (
                 <Link
@@ -559,6 +559,9 @@ const EpisodeDetailPage: React.FC = () => {
                 onCommit={(next) =>
                   editor.commitEpisodeField(program.id, episode.id, 'coverImage', next)
                 }
+                onAfterFileUpload={(url, message) =>
+                  editor.applyUploadedEpisodeCover(program.id, episode.id, url, message)
+                }
                 helpText="Sube PNG/JPEG/WebP, o edita ruta (images/…) o URL. Vacío = logo del programa."
               />
               <label className="border border-white/30 bg-black/75 p-3 text-white/85 backdrop-blur-sm">
@@ -576,6 +579,9 @@ const EpisodeDetailPage: React.FC = () => {
                     event.currentTarget.value = '';
                   }}
                 />
+                <p className="mt-2 font-mono text-[10px] text-white/45">
+                  WAV/FLAC se convierten a MP3 antes de subir. Subida directa a Archive.org.
+                </p>
                 <p className="mt-2 font-mono text-[10px] text-white/55 break-all">
                   {episode.audioUrl || 'Sin URL de audio'}
                 </p>

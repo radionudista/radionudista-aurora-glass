@@ -1,0 +1,431 @@
+{
+  "checkpoint": {
+    "es": {
+      "language": "es",
+      "title": "Checkpoint",
+      "slug": "checkpoint",
+      "id": "checkpoint",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 2,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "martes 20:00 - ARG",
+      "talent": [
+        "Julio Quintana"
+      ],
+      "social": [
+        "@kingtanatv"
+      ],
+      "logo": "4.png",
+      "audio_source": "checkpoint.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\checkpoint.md",
+      "content": "Un espacio para pensar los lenguajes del anime, los rituales gamer y las din├ímicas del fandom como parte de una identidad compartida. Cultura otaku, videojuegos y comunidades geek; una mirada cr├¡tica y emocional sobre los mundos que habitamos en la ficci├│n y c├│mo estos nos reflejan, nos conectan y nos transforman."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Checkpoint",
+      "slug": "checkpoint",
+      "id": "checkpoint",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 2,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "martes 20:00 - ARG",
+      "talent": [
+        "Julio Quintana"
+      ],
+      "social": [
+        "@kingtanatv"
+      ],
+      "logo": "4.png",
+      "audio_source": "checkpoint.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\checkpoint.md",
+      "content": "Um espa├ºo para considerar as linguagens dos animes, os rituais gamers e as din├ómicas dos fandoms como parte de uma identidade compartilhada. Cultura otaku, videogames e comunidades geek; um olhar cr├¡tico e emocional sobre os mundos que habitamos na fic├º├úo e como eles nos refletem, nos conectam e nos transformam."
+    }
+  },
+  "chicas-malas": {
+    "es": {
+      "language": "es",
+      "title": "Chicas Malas",
+      "slug": "chicas-malas",
+      "id": "chicas-malas",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 3,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Wed 20:00 - Europe/Madrid",
+      "talent": [
+        "Clared Navarro"
+      ],
+      "social": [
+        "@memorafilia_"
+      ],
+      "logo": "2.png",
+      "audio_source": "chicas-malas.mp3",
+      "schedule_meta": {
+        "weekday": 3,
+        "startTime": "20:00",
+        "timezone": "Europe/Madrid"
+      },
+      "menu": "",
+      "markdownfile": "src\\content\\es\\chicas-malas.md",
+      "content": "Conversaciones con mujeres de moral distra├¡da.\r\n  Compositoras, sex workers, madres radicales, artistas y otras rebeldes: aqu├¡ se habla sin tab├║es y con el deseo por delante. Una oda a la libertad desde lo ├¡ntimo."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Chicas Malas",
+      "slug": "chicas-malas",
+      "id": "chicas-malas",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 3,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Wed 20:00 - Europe/Madrid",
+      "talent": [
+        "Clared Navarro"
+      ],
+      "social": [
+        "@memorafilia_"
+      ],
+      "logo": "2.png",
+      "audio_source": "chicas-malas.mp3",
+      "schedule_meta": {
+        "weekday": 3,
+        "startTime": "20:00",
+        "timezone": "Europe/Madrid"
+      },
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\chicas-malas.md",
+      "content": "Conversas com mulheres moralmente desafiadas.\r\nCompositoras, profissionais do sexo, m├úes radicais, artistas e outras rebeldes: aqui falamos sem tabus e com o desejo em primeiro plano. Uma ode ├á liberdade do ├¡ntimo."
+    }
+  },
+  "estrella-distante": {
+    "es": {
+      "language": "es",
+      "title": "Estrella Distante",
+      "slug": "estrella-distante",
+      "id": "estrella-distante",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 4,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "viernes 17:00 - ARG",
+      "talent": [
+        "Karlis Chirinos",
+        "Juana Rapoport"
+      ],
+      "social": [
+        "@karlisalejandra",
+        "@juanarapo"
+      ],
+      "logo": "3.png",
+      "audio_source": "estrella-distante.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\estrella-distante.md",
+      "content": "Ciencia sin bata, astronom├¡a sin f├│rmulas.\r\n  Un programa que aterriza temas complejos del universo en lenguaje pop, sin perder el rigor ni la magia. De agujeros negros a teor├¡as del tiempo, hablamos como si estuvi├®ramos en una sobremesa estelar."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Estrella Distante",
+      "slug": "estrella-distante",
+      "id": "estrella-distante",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 4,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "viernes 17:00 - ARG",
+      "talent": [
+        "Karlis Chirinos",
+        "Juana Rapoport"
+      ],
+      "social": [
+        "@karlisalejandra",
+        "@juanarapo"
+      ],
+      "logo": "3.png",
+      "audio_source": "estrella-distante.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\estrella-distante.md",
+      "content": "Ci├¬ncia sem jaleco, astronomia sem f├│rmulas.\r\nUm programa que traz ├á tona temas complexos do universo em linguagem popular, sem perder o rigor ou a magia. De buracos negros a teorias do tempo, conversamos como se estiv├®ssemos em uma mesa de jantar estelar."
+    }
+  },
+  "la-otra-puerta": {
+    "es": {
+      "language": "es",
+      "title": "La Otra Puerta",
+      "slug": "la-otra-puerta",
+      "id": "la-otra-puerta",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 5,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "s├íbado 15:00 - ESP",
+      "talent": [
+        "Alberto Flores Solano"
+      ],
+      "social": [
+        "@soyfloressolano"
+      ],
+      "logo": "6.png",
+      "audio_source": "la-otra-puerta.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\la-otra-puerta.md",
+      "content": "Umbral sonoro hacia el arte y sus enigmas.\r\n  Entrevistas, mon├│logos y piezas h├¡bridas que indagan en el proceso creativo como acto m├¡stico. Cada episodio es una entrada a mundos interiores, obsesiones, formas de crear y sobrevivir."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "La Otra Puerta",
+      "slug": "la-otra-puerta",
+      "id": "la-otra-puerta",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 5,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "s├íbado 15:00 - ESP",
+      "talent": [
+        "Alberto Flores Solano"
+      ],
+      "social": [
+        "@soyfloressolano"
+      ],
+      "logo": "6.png",
+      "audio_source": "la-otra-puerta.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\la-otra-puerta.md",
+      "content": "Um limiar sonoro em dire├º├úo ├á arte e seus enigmas.\r\nEntrevistas, mon├│logos e pe├ºas h├¡bridas que exploram o processo criativo como um ato m├¡stico. Cada epis├│dio ├® uma entrada para mundos interiores, obsess├Áes, formas de criar e sobreviver."
+    }
+  },
+  "misterios": {
+    "es": {
+      "language": "es",
+      "title": "Misterios",
+      "slug": "misterios",
+      "id": "misterios",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 1,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Mon 22:00 - America/Sao_Paulo",
+      "talent": [
+        "Gustavo Perez"
+      ],
+      "social": [
+        "@gustavodesnudo"
+      ],
+      "logo": "5.png",
+      "audio_source": "misterios.mp3",
+      "schedule_meta": {
+        "weekday": 1,
+        "startTime": "22:00",
+        "timezone": "America/Sao_Paulo"
+      },
+      "menu": "",
+      "markdownfile": "src\\content\\es\\misterios.md",
+      "content": "Rarezas musicales latinoamericanas en clave de archivo paranormal.\r\n  Inspirado en programas como Archivos del M├ís All├í, Nuestro Ins├│lito Universo y Escalofr├¡os, este viaje sonoro rescata canciones, leyendas sonoras y pistas olvidadas del inconsciente colectivo latinoamericano. Narrado como un expediente secreto, es una c├ípsula de terror, historia y placer auditivo con mutaciones horripilantes de latin jazz.\r\nlatin jazz."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Misterios",
+      "slug": "misterios",
+      "id": "misterios",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 1,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Mon 22:00 - America/Sao_Paulo",
+      "talent": [
+        "Gustavo Perez"
+      ],
+      "social": [
+        "@gustavodesnudo"
+      ],
+      "logo": "5.png",
+      "audio_source": "misterios.mp3",
+      "schedule_meta": {
+        "weekday": 1,
+        "startTime": "22:00",
+        "timezone": "America/Sao_Paulo"
+      },
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\misterios.md",
+      "content": "Raridades musicais latino-americanas em um arquivo paranormal.\r\nInspirada em programas como Archivos del M├ís All├í, Nuestro Ins├│lito Universo e Escalofr├¡os, esta jornada sonora resgata can├º├Áes, lendas sonoras e pistas esquecidas do inconsciente coletivo latino-americano. Narrada como um arquivo secreto, ├® uma c├ípsula de terror, hist├│ria e prazer auditivo com toques aterrorizantes de jazz latino.\r\nazz latino."
+    },
+    "en": {
+      "language": "en",
+      "title": "Misterios",
+      "slug": "misterios",
+      "id": "misterios",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 1,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Mon 22:00 - America/Sao_Paulo",
+      "schedule_meta": {
+        "weekday": 1,
+        "startTime": "22:00",
+        "timezone": "America/Sao_Paulo"
+      },
+      "talent": [
+        "Gustavo Perez"
+      ],
+      "social": [
+        "@gustavodesnudo"
+      ],
+      "logo": "5.png",
+      "audio_source": "misterios.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\misterios.md",
+      "content": "Latin American musical rarities in paranormal archive key.\r\n  Inspired by programs such as Archivos del M├ís All├í, Nuestro Ins├│lito Universo and Escalofr├¡os, this sound journey rescues songs, sound legends and forgotten tracks from the Latin American collective unconscious. Told like a secret file, it is a capsule of terror, history and auditory pleasure with horrifying mutations of Latin jazz.\r\nlatin jazz"
+    }
+  },
+  "pindorama": {
+    "es": {
+      "language": "es",
+      "title": "Pindorama",
+      "slug": "pindorama",
+      "id": "pindorama",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 7,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "domingo 12:00 - BRA",
+      "talent": [
+        "Henrique Sanches"
+      ],
+      "social": [
+        "@pindoramaradio"
+      ],
+      "logo": "8.png",
+      "audio_source": "pindorama.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\pindorama.md",
+      "content": "Una hora de m├║sica brasile├▒a con alma tropical y una cuidada selecci├│n musical. Cada episodio incluye un mixtape tem├ítico, creado con sonidos de casetes, el bosque y la memoria. Desde ritmos olvidados hasta instrumentales excepcionales, Pindorama revela la sofisticaci├│n natural de un pa├¡s con una esencia moderna."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Pindorama",
+      "slug": "pindorama",
+      "id": "pindorama",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 7,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "domingo 12:00 - BRA",
+      "talent": [
+        "Henrique Sanches"
+      ],
+      "social": [
+        "@pindoramaradio"
+      ],
+      "logo": "8.png",
+      "audio_source": "pindorama.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\pindorama.md",
+      "content": "Uma hora de m├║sica brasileira com alma tropical e curadoria elegante. A cada epis├│dio, uma mixtape tem├ítica costurada por sons de fita cassete, da floresta e damem├│ria. Dos grooves esquecidos aos instrumentais raros, Pindorama revela a sofistica├º├úo natural de um pa├¡s moderno por ess├¬ncia."
+    }
+  },
+  "sordera-selectiva": {
+    "es": {
+      "language": "es",
+      "title": "Sordera Selectiva",
+      "slug": "sordera-selectiva",
+      "id": "sordera-selectiva",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 6,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Sat 18:00 - Europe/Madrid",
+      "talent": [
+        "Lucho Milazzo"
+      ],
+      "social": [
+        "@luchomy"
+      ],
+      "logo": "7.png",
+      "audio_source": "sordera-selectiva.mp3",
+      "schedule_meta": {
+        "weekday": 6,
+        "startTime": "18:00",
+        "timezone": "Europe/Madrid"
+      },
+      "menu": "",
+      "markdownfile": "src\\content\\es\\sordera-selectiva.md",
+      "content": "Curadur├¡a musical para o├¡dos inquietos.\r\n  Explora sonidos fuera de lo habitual: ruido, distorsi├│n, errores, texturas y estructuras an├│malas. Cada episodio gira en torno a un eje sonoro /del drone al glitch, del pop intervenido a la m├║sica espectral/ entrelazando artistas, contextos hist├│ricos y detalles de producci├│n."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Sordera Selectiva",
+      "slug": "sordera-selectiva",
+      "id": "sordera-selectiva",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 6,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "Sat 18:00 - Europe/Madrid",
+      "talent": [
+        "Lucho Milazzo"
+      ],
+      "social": [
+        "@luchomy"
+      ],
+      "logo": "7.png",
+      "audio_source": "sordera-selectiva.mp3",
+      "schedule_meta": {
+        "weekday": 6,
+        "startTime": "18:00",
+        "timezone": "Europe/Madrid"
+      },
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\sordera-selectiva.md",
+      "content": "Curadoria musical para ouvidos curiosos.\r\nExplora sons inusitados: ru├¡do, distor├º├úo, erros, texturas e estruturas an├┤malas. Cada epis├│dio gira em torno de um eixo sonoro ÔÇö do drone ao glitch, do pop manipulado ├á m├║sica espectral ÔÇö entrela├ºando artistas, contextos hist├│ricos e detalhes de produ├º├úo."
+    }
+  },
+  "volumen": {
+    "es": {
+      "language": "es",
+      "title": "Volumen",
+      "slug": "volumen",
+      "id": "volumen",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 8,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "domingo 15:00 - BRA",
+      "talent": [
+        "Diana Hung"
+      ],
+      "social": [
+        "@_dianaacarolina"
+      ],
+      "logo": "1.png",
+      "audio_source": "volumen.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\es\\volumen.md",
+      "content": "Arquitectura que suena. M├║sica que construye.\r\n  Un mapa sonoro que conecta movimientos arquitect├│nicos con los sonidos que los rodearon. Desde el brutalismo sovi├®tico hasta el futurismo tropical, Volumen teje historias entre espacios, ├®pocas y frecuencias."
+    },
+    "pt": {
+      "language": "pt",
+      "title": "Volumen",
+      "slug": "volumen",
+      "id": "volumen",
+      "component": "ProgramPage",
+      "public": true,
+      "program_order": 8,
+      "date": "2024-01-01T00:00:00.000Z",
+      "schedule": "domingo 15:00 - BRA",
+      "talent": [
+        "Diana Hung"
+      ],
+      "social": [
+        "@_dianaacarolina"
+      ],
+      "logo": "1.png",
+      "audio_source": "volumen.mp3",
+      "menu": "",
+      "markdownfile": "src\\content\\pt\\volumen.md",
+      "content": "Arquitetura que soa. M├║sica que constr├│i.\r\nUm mapa sonoro que conecta movimentos arquitet├┤nicos com os sons que os cercavam. Do brutalismo sovi├®tico ao futurismo tropical, Volumen tece hist├│rias atrav├®s de espa├ºos, eras e frequ├¬ncias."
+    }
+  }
+}

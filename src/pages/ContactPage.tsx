@@ -1,8 +1,7 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import ContactForm from '../components/ContactForm';
 import { PAGE_SCREEN_TITLE_CLASS } from '../constants/layoutConstants';
-import ContactInformation from '../components/ContactInformation';
-import FollowUs from '../components/FollowUs';
 import { useEditorialText } from '../hooks/useEditorContent';
 import { useRouteLanguage } from '../hooks/useRouteLanguage';
 import { resolveEditorialText } from '../utils/editorialText';
@@ -10,28 +9,28 @@ import { useOptionalEditor } from '../contexts/EditorContext';
 import InlineEditableText from '../components/InlineEditableText';
 
 const ContactPage = () => {
+  const { t } = useTranslation();
   const editorial = useEditorialText();
   const editor = useOptionalEditor();
   const lang = useRouteLanguage();
 
-  const handleFormSubmit = async (formData: Record<string, unknown>) => {
-    // Handle form submission logic here
-    console.log('Form submitted:', formData);
-    // You can add API call or other submission logic here
-  };
+  const pageTitle =
+    resolveEditorialText(editorial?.contact.pageTitle, lang) || t('contact.page-title');
+  const pageSubtitle =
+    resolveEditorialText(editorial?.contact.pageSubtitle, lang) || t('contact.page-subtitle');
 
   return (
-    <div className="container mx-auto px-6 py-12">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-16">
+    <section className="relative min-h-full bg-black px-3 pb-16 pt-24 text-white md:px-6">
+      <div className="pointer-events-none absolute inset-0 bg-[#0a0a0b]" aria-hidden />
+
+      <div className="relative z-10 mx-auto w-full max-w-2xl">
+        <header className="mb-10">
           {editor?.enabled ? (
             <InlineEditableText
               as="h1"
               size="lg"
-              align="center"
-              className="mb-6"
-              textClassName={`${PAGE_SCREEN_TITLE_CLASS} text-white`}
-              value={resolveEditorialText(editorial?.contact.pageTitle, lang)}
+              textClassName={`${PAGE_SCREEN_TITLE_CLASS} leading-[0.9] text-white break-words`}
+              value={pageTitle}
               language={lang}
               localizedValues={editorial?.contact.pageTitle}
               onCommit={(next) => editor.commitEditorialField('contact', 'pageTitle', lang, next)}
@@ -40,42 +39,38 @@ const ContactPage = () => {
               }
             />
           ) : (
-            <h1 className={`${PAGE_SCREEN_TITLE_CLASS} text-white mb-6`}>
-              {resolveEditorialText(editorial?.contact.pageTitle, lang)}
+            <h1
+              className={`${PAGE_SCREEN_TITLE_CLASS} leading-[0.9] text-white break-words`}
+            >
+              {pageTitle}
             </h1>
           )}
           {editor?.enabled ? (
             <InlineEditableText
               as="div"
-              align="center"
-              textClassName="text-xl text-gray-300"
-              value={resolveEditorialText(editorial?.contact.pageSubtitle, lang)}
+              className="mt-4"
+              textClassName="font-['Space_Grotesk'] text-sm uppercase tracking-[0.14em] text-white/60"
+              value={pageSubtitle}
               language={lang}
               localizedValues={editorial?.contact.pageSubtitle}
-              onCommit={(next) => editor.commitEditorialField('contact', 'pageSubtitle', lang, next)}
+              onCommit={(next) =>
+                editor.commitEditorialField('contact', 'pageSubtitle', lang, next)
+              }
               onCommitLocalized={(values) =>
                 editor.commitEditorialFieldLocalized('contact', 'pageSubtitle', values)
               }
             />
           ) : (
-            <p className="text-xl text-gray-300">
-              {resolveEditorialText(editorial?.contact.pageSubtitle, lang)}
+            <p className="mt-4 font-['Space_Grotesk'] text-sm uppercase tracking-[0.14em] text-white/60">
+              {pageSubtitle}
             </p>
           )}
-        </div>
+          <div className="mt-8 h-px w-full bg-white/15" aria-hidden />
+        </header>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Contact Form Component */}
-          <ContactForm onSubmit={handleFormSubmit} />
-
-          {/* Contact Information and Follow Us Components */}
-          <div className="space-y-8">
-            <ContactInformation />
-            <FollowUs />
-          </div>
-        </div>
+        <ContactForm />
       </div>
-    </div>
+    </section>
   );
 };
 

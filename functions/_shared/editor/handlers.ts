@@ -2,19 +2,23 @@ import {
   ARCHIVE_ALLOWED_AUDIO_MIME,
   MAX_AUDIO_BYTES,
   sanitizeSegment,
-  SLUG_RE,
 } from './constants';
-import type { EditorRuntimeConfig, EditorStore } from './types';
 import { translateTextWithProviders } from './translateText';
-import { decodeAudioBase64, decodeAudioBase64Node, uploadEpisodeAudioToArchive } from './uploadEpisodeAudio';
-import type { SavePayloadInput } from './savePayload';
+import { decodeAudioBase64, decodeAudioBase64Node, buildArchiveUploadPlan, uploadEpisodeAudioToArchive } from './uploadEpisodeAudio';
+import { parseArchiveUploadMetaFromHeaders } from './parseArchiveUploadMeta';
+import { createTranslateUsageStore } from './translateUsage';
+import type { EditorRuntimeConfig } from './types';
 
 export interface EditorHandlerResult {
   status: number;
   body: Record<string, unknown>;
 }
 
-const ok = (body: Record<string, unknown>, status = 200): EditorHandlerResult => ({ status, body: { ok: true, ...body } });
+const ok = (body: Record<string, unknown>, status = 200): EditorHandlerResult => ({
+  status,
+  body: { ok: true, ...body },
+});
+
 const fail = (message: string, status = 400, extra: Record<string, unknown> = {}): EditorHandlerResult => ({
   status,
   body: { ok: false, message, ...extra },
@@ -24,93 +28,105 @@ export const handleEditorRoute = async (options: {
   method: string;
   subpath: string;
   body: unknown;
-  store: EditorStore;
   config: EditorRuntimeConfig;
   runtime: 'local' | 'cloudflare';
+  supabaseEnv?: {
+    SUPABASE_URL?: string;
+    SUPABASE_SERVICE_ROLE_KEY?: string;
+  };
+  binaryBody?: ArrayBuffer;
+  requestHeaders?: Record<string, string | undefined>;
 }): Promise<EditorHandlerResult> => {
-  const { method, subpath, store, config, runtime } = options;
+  const { method, subpath, config, runtime, supabaseEnv } = options;
   const body = (options.body ?? {}) as Record<string, unknown>;
+  const usageStore = createTranslateUsageStore(supabaseEnv ?? {});
 
-  if (method === 'GET' && subpath === 'status') {
-    const status = await store.getStatus();
-    return ok({ enabled: true, ...status });
-  }
-
-  if (method === 'POST' && subpath === 'save') {
-    try {
-      await store.persistSavePayload(body as SavePayloadInput);
-      return ok({ message: 'Cambios guardados en JSON.' });
-    } catch (error) {
-      return fail(error instanceof Error ? error.message : 'Error al guardar.', 500);
+  if (method === 'POST' && subpath === 'prepare-archive-audio-upload') {
+    const accessKey = config.archive?.accessKey || '';
+    const secretKey = config.archive?.secretKey || '';
+    const collection = config.archive?.collection || 'opensource_audio';
+    if (!accessKey || !secretKey) {
+      return fail('Faltan IA_ACCESS_KEY o IA_SECRET_KEY en entorno.');
     }
-  }
 
-  if (method === 'POST' && subpath === 'publish') {
-    try {
-      await store.publishSavePayload(body as SavePayloadInput);
-      const message =
-        runtime === 'cloudflare'
-          ? `Cambios publicados en GitHub. El deploy se activará automáticamente.`
-          : 'Cambios publicados a GitHub.';
-      return ok({ message });
-    } catch (error) {
-      return fail(error instanceof Error ? error.message : 'Error al publicar.', 500);
+    const programId = sanitizeSegment(String(body.programId || ''));
+    const episodeId = sanitizeSegment(String(body.episodeId || ''));
+    const date = String(body.date || '').trim();
+    const mimeType = String(body.mimeType || 'audio/mpeg').trim().toLowerCase();
+    const fileSizeBytes = Number(body.fileSizeBytes || 0);
+
+    if (!programId || !episodeId) {
+      return fail('Faltan campos requeridos.');
     }
-  }
+    if (mimeType !== 'audio/mpeg' && mimeType !== 'audio/mp3') {
+      return fail('Solo se permite subir MP3 a Archive.org.');
+    }
+    if (fileSizeBytes < 1024) return fail('Audio vacío o corrupto.');
+    if (fileSizeBytes > MAX_AUDIO_BYTES) return fail('Audio demasiado grande (máx. 512 MB).');
 
-  if (method === 'POST' && subpath === 'upload-image') {
     try {
-      const scope = String(body.scope || '');
-      if (scope !== 'program-logo' && scope !== 'episode-cover') {
-        return fail('scope debe ser program-logo o episode-cover.');
-      }
-      if (!body.programId || !body.dataBase64 || !body.mimeType) {
-        return fail('Faltan programId, mimeType o dataBase64.');
-      }
-      const result = await store.uploadImage({
-        scope,
-        programId: String(body.programId),
-        episodeId: body.episodeId ? String(body.episodeId) : undefined,
-        mimeType: String(body.mimeType),
-        dataBase64: String(body.dataBase64),
+      const plan = buildArchiveUploadPlan({
+        accessKey,
+        secretKey,
+        collection,
+        programId,
+        episodeId,
+        date,
+        mimeType: 'audio/mpeg',
+        fileName: String(body.fileName || `${episodeId}.mp3`),
       });
+
       return ok({
-        message:
-          result.logoFileName
-            ? 'Logo guardado en public/images/logos.'
-            : 'Portada guardada en public/images/episode-covers.',
-        ...result,
+        message: 'Permiso de subida a Archive.org generado.',
+        identifier: plan.identifier,
+        itemUrl: plan.itemUrl,
+        audioUrl: plan.audioUrl,
+        fileName: plan.fileName,
+        putUrl: plan.putUrl,
+        uploadHeaders: plan.uploadHeaders,
       });
     } catch (error) {
-      return fail(error instanceof Error ? error.message : 'Error al subir imagen.', 500);
+      return fail(error instanceof Error ? error.message : 'Error al preparar subida.', 502);
     }
   }
 
-  if (method === 'POST' && subpath === 'create-program') {
-    try {
-      const result = await store.createProgram({
-        id: String(body.id || ''),
-        titleEs: String(body.titleEs || ''),
-        titlePt: String(body.titlePt || ''),
-        schedule: body.schedule ? String(body.schedule) : undefined,
-      });
-      return ok({ message: `Programa "${result.programId}" creado (markdown, episodios e índice).`, ...result });
-    } catch (error) {
-      return fail(error instanceof Error ? error.message : 'Error al crear programa.', 500);
+  if (method === 'POST' && subpath === 'upload-episode-audio-proxy') {
+    const accessKey = config.archive?.accessKey || '';
+    const secretKey = config.archive?.secretKey || '';
+    const collection = config.archive?.collection || 'opensource_audio';
+    if (!accessKey || !secretKey) {
+      return fail('Faltan IA_ACCESS_KEY o IA_SECRET_KEY en entorno.');
     }
-  }
 
-  if (method === 'POST' && subpath === 'delete-program') {
+    const fileBuffer = options.binaryBody;
+    if (!fileBuffer || fileBuffer.byteLength < 1024) {
+      return fail('Audio vacío o corrupto.');
+    }
+    if (fileBuffer.byteLength > MAX_AUDIO_BYTES) {
+      return fail('Audio demasiado grande (máx. 512 MB).');
+    }
+
+    const meta = parseArchiveUploadMetaFromHeaders(options.requestHeaders ?? {});
+    if (!meta.programId || !meta.episodeId) {
+      return fail('Faltan metadatos del episodio (programId, episodeId).');
+    }
+
     try {
-      const result = await store.deleteProgram({
-        id: String(body.id || ''),
-        confirmText: String(body.confirmText || ''),
+      const uploaded = await uploadEpisodeAudioToArchive({
+        accessKey,
+        secretKey,
+        collection,
+        programId: meta.programId,
+        episodeId: meta.episodeId,
+        date: meta.date,
+        mimeType: 'audio/mpeg',
+        fileName: meta.fileName,
+        fileBuffer,
       });
-      return ok({ message: `Programa "${result.programId}" eliminado.`, ...result });
+
+      return ok({ message: 'Audio subido a Archive.org.', ...uploaded });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error al eliminar programa.';
-      const status = message.includes('No se encontró') ? 404 : 500;
-      return fail(message, status);
+      return fail(error instanceof Error ? error.message : 'Error al subir audio.', 502);
     }
   }
 
@@ -124,12 +140,11 @@ export const handleEditorRoute = async (options: {
 
     const programId = sanitizeSegment(String(body.programId || ''));
     const episodeId = sanitizeSegment(String(body.episodeId || ''));
-    const episodeTitle = String(body.episodeTitle || '').trim();
     const date = String(body.date || '').trim();
     const mimeType = String(body.mimeType || '').trim().toLowerCase();
     const ext = ARCHIVE_ALLOWED_AUDIO_MIME[mimeType];
 
-    if (!programId || !episodeId || !episodeTitle || !body.dataBase64 || !mimeType || !ext) {
+    if (!programId || !episodeId || !body.dataBase64 || !mimeType || !ext) {
       return fail('Faltan campos requeridos o mimeType inválido.');
     }
 
@@ -149,20 +164,13 @@ export const handleEditorRoute = async (options: {
       if (size < 1024) return fail('Audio vacío o corrupto.');
       if (size > MAX_AUDIO_BYTES) return fail('Audio demasiado grande (máx. 512 MB).');
 
-      const tags = Array.isArray(body.tags)
-        ? body.tags.map((tag) => String(tag || '').trim()).filter(Boolean).slice(0, 30)
-        : [];
-
       const uploaded = await uploadEpisodeAudioToArchive({
         accessKey,
         secretKey,
         collection,
         programId,
         episodeId,
-        episodeTitle,
         date,
-        description: String(body.description || ''),
-        tags,
         mimeType,
         fileName: String(body.fileName || `${episodeId}.mp3`),
         fileBuffer: arrayBuffer,
@@ -201,7 +209,7 @@ export const handleEditorRoute = async (options: {
 
     const month = new Date().toISOString().slice(0, 7);
     const requestedChars = text.length * targets.length;
-    const usedChars = await store.readTranslateUsage(month);
+    const usedChars = await usageStore.readTranslateUsage(month);
 
     if (usedChars + requestedChars > monthlyLimit) {
       const remainingChars = Math.max(0, monthlyLimit - usedChars);
@@ -221,7 +229,7 @@ export const handleEditorRoute = async (options: {
         endpointCandidates,
       });
       const nextUsedChars = usedChars + requestedChars;
-      await store.writeTranslateUsage(month, nextUsedChars, monthlyLimit);
+      await usageStore.writeTranslateUsage(month, nextUsedChars, monthlyLimit);
       return ok({
         message: 'Texto traducido.',
         month,
@@ -238,10 +246,4 @@ export const handleEditorRoute = async (options: {
   }
 
   return fail('Endpoint no encontrado.', 404);
-};
-
-export const normalizeProgramId = (raw: string): string => {
-  const id = raw.trim().toLowerCase().replace(/\s+/g, '-').replace(/_/g, '-');
-  if (!SLUG_RE.test(id)) throw new Error('ID inválido.');
-  return id;
 };
