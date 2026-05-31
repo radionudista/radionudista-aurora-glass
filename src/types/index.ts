@@ -3,6 +3,8 @@
  * Follows Interface Segregation Principle - small, focused interfaces
  */
 
+import type { EditorLanguage } from '../editor/contracts';
+
 // Audio Player Types
 export interface AudioPlayerState {
   isPlaying: boolean;
@@ -101,5 +103,5 @@ export interface ProgramEpisodesTrash {
 }
 
 export interface IEpisodeService {
-  getEpisodesByProgram(programId: string): Promise<ProgramEpisodes>;
+  getEpisodesByProgram(programId: string, lang?: EditorLanguage): Promise<ProgramEpisodes>;
 }

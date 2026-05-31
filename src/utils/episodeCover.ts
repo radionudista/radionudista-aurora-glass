@@ -1,5 +1,7 @@
 import type { Episode } from '../types';
 
+import { DEFAULT_PROGRAM_LOGO, resolveProgramLogoSrc } from './programLogo';
+
 /** Ruta bajo /public, URL absoluta, o nombre de archivo en logos del programa */
 export function resolveCoverSrc(episode: Episode, programLogo: string | null): string {
   if (episode.coverImage?.trim()) {
@@ -7,6 +9,6 @@ export function resolveCoverSrc(episode: Episode, programLogo: string | null): s
     if (c.startsWith('http://') || c.startsWith('https://')) return c;
     return c.startsWith('/') ? c : `/${c}`;
   }
-  if (programLogo) return `/images/logos/${programLogo}`;
-  return '/images/logo-radionudista-negro.png';
+  if (programLogo?.trim()) return resolveProgramLogoSrc(programLogo);
+  return DEFAULT_PROGRAM_LOGO;
 }

@@ -1,13 +1,10 @@
-import { assertEditorAuthorized, jsonResponse } from '../../_shared/editorAuth';
+import { assertSupabaseJwtAuthorized, jsonResponse } from '../../_shared/supabaseJwtAuth';
 import { handleEditorRoute } from '../../_shared/editor/handlers';
-import { createGithubEditorStore } from '../../_shared/editor/githubStore';
-import { parseGithubRepo } from '../../_shared/editor/githubRepo';
 
 interface Env {
-  EDITOR_PASSWORD_HASH?: string;
-  EDITOR_GITHUB_TOKEN?: string;
-  EDITOR_GIT_BRANCH?: string;
-  EDITOR_GITHUB_REPO?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
   IA_ACCESS_KEY?: string;
   IA_SECRET_KEY?: string;
   IA_COLLECTION?: string;
@@ -21,27 +18,17 @@ interface Env {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
   const subpath = Array.isArray(params.path) ? params.path.join('/') : String(params.path ?? '');
-  const expectedHash = (env.EDITOR_PASSWORD_HASH || '').trim();
 
-  const authError = assertEditorAuthorized(request, expectedHash);
+  const authError = await assertSupabaseJwtAuthorized(request, env);
   if (authError) return authError;
 
-  const token = (env.EDITOR_GITHUB_TOKEN || '').trim();
-  const branch = (env.EDITOR_GIT_BRANCH || 'master').trim();
-  const repoRaw = (env.EDITOR_GITHUB_REPO || '').trim();
-
-  if (!token || !repoRaw) {
-    return jsonResponse(503, {
-      ok: false,
-      message: 'Faltan EDITOR_GITHUB_TOKEN o EDITOR_GITHUB_REPO en el servidor.',
-    });
-  }
-
-  const { owner, repo } = parseGithubRepo(repoRaw);
-  const store = createGithubEditorStore({ token, owner, repo, branch });
-
+  const isAudioProxy = request.method === 'POST' && subpath === 'upload-episode-audio-proxy';
   let body: unknown = {};
-  if (request.method !== 'GET') {
+  let binaryBody: ArrayBuffer | undefined;
+
+  if (isAudioProxy) {
+    binaryBody = await request.arrayBuffer();
+  } else if (request.method !== 'GET') {
     try {
       body = await request.json();
     } catch {
@@ -49,11 +36,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
+  const requestHeaders = Object.fromEntries([...request.headers.entries()]);
+
   const result = await handleEditorRoute({
     method: request.method,
     subpath,
     body,
-    store,
+    binaryBody,
+    requestHeaders,
     runtime: 'cloudflare',
     config: {
       archive: {
@@ -66,6 +56,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         endpointUrl: env.TRANSLATE_API_URL || env.GOOGLE_TRANSLATE_API_URL,
         monthlyCharLimit: Number(env.EDITOR_TRANSLATE_MONTHLY_CHAR_LIMIT || 500000),
       },
+    },
+    supabaseEnv: {
+      SUPABASE_URL: env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
     },
   });
 

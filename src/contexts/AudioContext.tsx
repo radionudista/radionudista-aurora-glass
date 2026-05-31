@@ -28,6 +28,7 @@ interface AudioContextType {
 
 const EXTERNAL_AUDIO_HOSTS = [
   'archive.org',
+  'supabase.co',
   'soundcloud.com',
   'sndcdn.com',
   'dropbox.com',
@@ -103,6 +104,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const programAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioInstancesRef = useRef<Set<HTMLAudioElement>>(new Set());
+  const currentTrackRef = useRef(currentTrack);
+  currentTrackRef.current = currentTrack;
   const streamService = useRef(
     new RadioStreamService(
       STREAM_CONFIG.statusUrl,
@@ -736,23 +739,36 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * Track Information - Following SRP
    */
   const fetchCurrentTrack = useCallback(async () => {
+    if (document.hidden) return;
     try {
       const trackName = await streamService.current.fetchCurrentTrack();
-      if (trackName !== currentTrack) {
+      if (trackName !== currentTrackRef.current) {
         setCurrentTrack(trackName);
         const coverUrl = await streamService.current.fetchSongCover(trackName);
         setCoverImageUrl(coverUrl);
       }
-    } catch (error) {
-      console.error('Error fetching track info:', error);
+    } catch {
+      // Errores ya manejados en streamService (sin ruido en consola)
     }
-  }, [currentTrack]);
+  }, []);
 
-  // Effects
+  // Polling del now-playing: solo con la pestaña visible
   useEffect(() => {
-    fetchCurrentTrack();
-    const interval = setInterval(fetchCurrentTrack, MEDIA_CONSTANTS.STREAM.UPDATE_INTERVAL);
-    return () => clearInterval(interval);
+    void fetchCurrentTrack();
+
+    const interval = setInterval(() => {
+      void fetchCurrentTrack();
+    }, MEDIA_CONSTANTS.STREAM.UPDATE_INTERVAL);
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) void fetchCurrentTrack();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [fetchCurrentTrack]);
 
   // Cleanup effect - ensures all audio instances are properly disposed on unmount

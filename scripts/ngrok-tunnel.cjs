@@ -26,8 +26,6 @@ loadEnvIfExists(".env.development.local");
 const port = Number(process.env.NGROK_LOCAL_PORT || 8080);
 const token = (process.env.NGROK_AUTHTOKEN || "").trim();
 const forced = (process.env.TUNNEL_PROVIDER || "").trim().toLowerCase();
-const editorEnabled = String(process.env.VITE_EDITOR_ENABLED || "").toLowerCase() === "true";
-const editorPasswordHash = (process.env.VITE_EDITOR_PASSWORD_HASH || "").trim();
 let ngrokProcess = null;
 
 function ngrokConfigExists() {
@@ -52,11 +50,6 @@ async function shutdown() {
 (async () => {
   if (forced && forced !== "ngrok") {
     console.error("TUNNEL_PROVIDER debe ser ngrok. localtunnel ya no está soportado.");
-    process.exit(1);
-  }
-
-  if (editorEnabled && !editorPasswordHash) {
-    console.error("VITE_EDITOR_ENABLED=true requiere VITE_EDITOR_PASSWORD_HASH antes de abrir ngrok.");
     process.exit(1);
   }
 

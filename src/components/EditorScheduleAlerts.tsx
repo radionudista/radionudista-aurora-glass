@@ -6,6 +6,7 @@ import {
   isProgramScheduleMeta,
   type ProgramScheduleMeta,
 } from '../utils/programSchedule';
+import { isArchivosProgramEntry } from '../editor/programUtils';
 
 const STORAGE_KEY = 'editor-schedule-exceptions-v1';
 
@@ -38,7 +39,7 @@ const EditorScheduleAlerts: React.FC = () => {
       const es = entry.es as Record<string, unknown> | undefined;
       const pt = entry.pt as Record<string, unknown> | undefined;
       const source = es || pt;
-      if (!source || source.component !== 'ProgramPage') return;
+      if (!source || !isArchivosProgramEntry(source as { component?: string; content_kind?: string })) return;
       const meta = source.schedule_meta;
       if (isProgramScheduleMeta(meta)) expectedByProgram[id.toLowerCase()] = meta;
       const title = String((source.title || '')).toLowerCase().trim();

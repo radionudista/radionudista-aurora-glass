@@ -12,7 +12,7 @@ import { resolveEditorialText } from '../utils/editorialText';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import { useArchivePlayer } from '../contexts/ArchivePlayerContext';
 import InlineEditableText from '../components/InlineEditableText';
-import type { Episode } from '../types';
+import { resolveProgramLogoSrc } from '../utils/programLogo';
 
 const HOME_MANIFEST_VIDEO_STORAGE_KEY = 'rn.home.manifest.video.queue';
 const HOME_MANIFEST_VIDEO_LOAD_MARK_KEY = 'rn.home.manifest.video.load-mark';
@@ -31,9 +31,6 @@ const HomePage = () => {
   const archivePlayer = useArchivePlayer();
   const lang = useRouteLanguage();
   const { program, heroImageUrl, isLive, isLoading, isError, pastPrograms } = useLiveProgram();
-  const [isJoinPanelOpen, setIsJoinPanelOpen] = React.useState(false);
-  const [isMailChoiceOpen, setIsMailChoiceOpen] = React.useState(false);
-  const [mailChoiceError, setMailChoiceError] = React.useState<string | null>(null);
   const [manifestVideo, setManifestVideo] = React.useState<string>(VIDEO_CONFIG.defaultVideo);
   const failedVideosRef = React.useRef<Set<string>>(new Set());
 
@@ -63,10 +60,10 @@ const HomePage = () => {
 
   const pastProgramEpisodeQueries = useQueries({
     queries: pastPrograms.map((past) => ({
-      queryKey: ['home-episodes-for-event', past.programId ?? 'no-program', past.event.id],
+      queryKey: ['home-episodes-for-event', past.programId ?? 'no-program', past.event.id, lang],
       queryFn: () =>
         past.programId
-          ? episodeService.getEpisodesByProgram(past.programId)
+          ? episodeService.getEpisodesByProgram(past.programId, lang)
           : Promise.resolve({ programId: '', episodes: [] as Episode[] }),
       enabled: Boolean(past.programId),
       staleTime: 1000 * 60 * 10,
@@ -135,37 +132,14 @@ const HomePage = () => {
     setManifestVideo(nextVideo);
   }, [manifestVideo]);
 
-  const openJoinMail = React.useCallback((provider: 'system' | 'gmail' | 'outlook') => {
-    const subject = encodeURIComponent('Quiero proponer un programa');
-    const body = encodeURIComponent(
-      'Hola RadioNudista,\n\nMe gustaria sumarme con un programa.\n\nFormato:\nTema:\nFrecuencia:\n\nGracias.'
-    );
-    const to = encodeURIComponent('correonudista@gmail.com');
-    const urlByProvider = {
-      system: `mailto:correonudista@gmail.com?subject=${subject}&body=${body}`,
-      gmail: `https://mail.google.com/mail/u/0/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`,
-      outlook: `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subject}&body=${body}`,
-    };
-    const url = urlByProvider[provider];
+  const contactPath = `/${i18n.language}/contacto`;
 
-    if (provider === 'system') {
-      setMailChoiceError(null);
-      setIsMailChoiceOpen(false);
-      window.location.href = url;
-      return;
-    }
-
-    // Open a tab first, then navigate it, so current app route is never replaced.
-    const popup = window.open('', '_blank');
-    if (!popup) {
-      setMailChoiceError('Tu navegador bloqueó la nueva pestaña. Habilita popups para continuar.');
-      return;
-    }
-    popup.opener = null;
-    popup.location.href = url;
-    setMailChoiceError(null);
-    setIsMailChoiceOpen(false);
-  }, []);
+  const manifestKicker =
+    resolveEditorialText(editorial?.home.manifestKicker, lang) || t('home.manifest-kicker');
+  const manifestTitle =
+    resolveEditorialText(editorial?.home.manifestTitle, lang) || t('home.manifest-title');
+  const manifestSubtitle =
+    resolveEditorialText(editorial?.home.manifestSubtitle, lang) || t('home.manifest-subtitle');
 
   return (
     <section className="relative flex-1 w-full bg-black">
@@ -247,9 +221,7 @@ const HomePage = () => {
 
                 const cardImage = matchedEpisode?.coverImage
                   ? matchedEpisode.coverImage
-                  : past.logoFile
-                  ? `/images/logos/${past.logoFile}`
-                  : '/images/logo-radionudista-negro.png';
+                  : resolveProgramLogoSrc(past.logoFile);
 
                 return (
                   <article
@@ -330,9 +302,24 @@ const HomePage = () => {
           <div className="absolute inset-0 bg-black/70" aria-hidden />
 
           <div className="relative z-10 mx-auto flex min-h-[42vh] w-full max-w-5xl flex-col items-center justify-center px-6 py-16 text-center">
-            <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.22em] text-white/65">
-              {t('home.manifest-kicker')}
-            </p>
+            {editor?.enabled ? (
+              <InlineEditableText
+                as="p"
+                align="center"
+                textClassName="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.22em] text-white/65"
+                value={manifestKicker}
+                language={lang}
+                localizedValues={editorial?.home.manifestKicker}
+                onCommit={(next) => editor.commitEditorialField('home', 'manifestKicker', lang, next)}
+                onCommitLocalized={(values) =>
+                  editor.commitEditorialFieldLocalized('home', 'manifestKicker', values)
+                }
+              />
+            ) : (
+              <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.22em] text-white/65">
+                {manifestKicker}
+              </p>
+            )}
             {editor?.enabled ? (
               <InlineEditableText
                 as="h3"
@@ -340,7 +327,7 @@ const HomePage = () => {
                 align="center"
                 className="mt-4 max-w-4xl"
                 textClassName="font-['Space_Grotesk'] text-3xl font-black uppercase leading-[0.95] tracking-tight text-white md:text-5xl"
-                value={resolveEditorialText(editorial?.home.manifestTitle, lang)}
+                value={manifestTitle}
                 language={lang}
                 localizedValues={editorial?.home.manifestTitle}
                 onCommit={(next) => editor.commitEditorialField('home', 'manifestTitle', lang, next)}
@@ -350,7 +337,7 @@ const HomePage = () => {
               />
             ) : (
               <h3 className="mt-4 max-w-4xl font-['Space_Grotesk'] text-3xl font-black uppercase leading-[0.95] tracking-tight text-white md:text-5xl">
-                {resolveEditorialText(editorial?.home.manifestTitle, lang)}
+                {manifestTitle}
               </h3>
             )}
             {editor?.enabled ? (
@@ -359,7 +346,7 @@ const HomePage = () => {
                 className="mt-5 max-w-2xl"
                 align="center"
                 textClassName="font-['Space_Grotesk'] text-sm uppercase tracking-[0.14em] text-white/75 md:text-base"
-                value={resolveEditorialText(editorial?.home.manifestSubtitle, lang)}
+                value={manifestSubtitle}
                 language={lang}
                 localizedValues={editorial?.home.manifestSubtitle}
                 onCommit={(next) => editor.commitEditorialField('home', 'manifestSubtitle', lang, next)}
@@ -369,154 +356,16 @@ const HomePage = () => {
               />
             ) : (
               <p className="mt-5 max-w-2xl font-['Space_Grotesk'] text-sm uppercase tracking-[0.14em] text-white/75 md:text-base">
-                {resolveEditorialText(editorial?.home.manifestSubtitle, lang)}
+                {manifestSubtitle}
               </p>
             )}
-            <button
-              type="button"
-              onClick={() => setIsJoinPanelOpen(true)}
-              className="mt-6 border border-white/45 px-5 py-2 font-['Space_Grotesk'] text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-black"
+            <Link
+              to={contactPath}
+              className="mt-6 inline-block border border-white/45 px-5 py-2 font-['Space_Grotesk'] text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-black"
             >
               {t('home.manifest-join-link')}
-            </button>
+            </Link>
           </div>
-
-          <div
-            className={`fixed inset-0 z-20 transition-colors duration-300 ${
-              isJoinPanelOpen ? 'pointer-events-auto bg-black/40' : 'pointer-events-none bg-transparent'
-            }`}
-            onClick={() => setIsJoinPanelOpen(false)}
-            aria-hidden
-          />
-
-          <aside
-            className={`fixed right-0 top-20 bottom-0 z-30 w-full border-l border-white/20 bg-black/95 p-5 md:absolute md:top-0 md:h-full md:max-w-[540px] md:p-8 transition-transform duration-300 ease-out overflow-y-auto ${
-              isJoinPanelOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}
-            aria-hidden={!isJoinPanelOpen}
-          >
-            <div className="flex h-full flex-col">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.2em] text-white/50">
-                    {t('home.join-panel-kicker')}
-                  </p>
-                  <h4 className="mt-2 font-['Space_Grotesk'] text-2xl font-black uppercase leading-tight tracking-tight text-white">
-                    {t('home.join-panel-title')}
-                  </h4>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsJoinPanelOpen(false)}
-                  className="h-9 w-9 border border-white/30 text-white/80 transition hover:text-white"
-                  aria-label={t('common.close')}
-                >
-                  ×
-                </button>
-              </div>
-
-              {editor?.enabled ? (
-                <div className="mt-5">
-                  <InlineEditableText
-                    multiline
-                    textClassName="font-['Space_Grotesk'] text-sm leading-relaxed text-white/80"
-                    value={resolveEditorialText(editorial?.home.joinPanelCopy, lang)}
-                    language={lang}
-                    localizedValues={editorial?.home.joinPanelCopy}
-                    onCommit={(next) => editor.commitEditorialField('home', 'joinPanelCopy', lang, next)}
-                    onCommitLocalized={(values) =>
-                      editor.commitEditorialFieldLocalized('home', 'joinPanelCopy', values)
-                    }
-                  />
-                </div>
-              ) : (
-                <p className="mt-5 font-['Space_Grotesk'] text-sm leading-relaxed text-white/80">
-                  {resolveEditorialText(editorial?.home.joinPanelCopy, lang)}
-                </p>
-              )}
-
-              <div className="mt-6 grid gap-3">
-                <p className="border border-white/15 px-3 py-2 font-['Space_Grotesk'] text-[11px] uppercase tracking-[0.15em] text-white/75">
-                  {t('home.join-panel-point-1')}
-                </p>
-                <p className="border border-white/15 px-3 py-2 font-['Space_Grotesk'] text-[11px] uppercase tracking-[0.15em] text-white/75">
-                  {t('home.join-panel-point-2')}
-                </p>
-                <p className="border border-white/15 px-3 py-2 font-['Space_Grotesk'] text-[11px] uppercase tracking-[0.15em] text-white/75">
-                  {t('home.join-panel-point-3')}
-                </p>
-              </div>
-
-              <div className="mt-auto pt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMailChoiceError(null);
-                    setIsMailChoiceOpen(true);
-                  }}
-                  className="inline-block border border-white bg-white px-5 py-3 font-['Space_Grotesk'] text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-transparent hover:text-white"
-                >
-                  {t('home.join-panel-cta')}
-                </button>
-                <p className="mt-3 font-['Space_Grotesk'] text-[11px] uppercase tracking-[0.14em] text-white/55">
-                  {t('home.join-panel-note')}
-                </p>
-              </div>
-            </div>
-          </aside>
-
-          {isMailChoiceOpen && (
-            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4">
-              <div className="w-full max-w-sm border border-white/20 bg-black p-5 shadow-2xl">
-                <p className="font-['Space_Grotesk'] text-xs uppercase tracking-[0.16em] text-white/70">
-                  Proponer programa
-                </p>
-                <h5 className="mt-2 font-['Space_Grotesk'] text-lg font-bold uppercase tracking-tight text-white">
-                  Abrir correo prellenado
-                </h5>
-                <p className="mt-3 font-['Space_Grotesk'] text-sm leading-relaxed text-white/65">
-                  No enviamos nada automáticamente. Se abrirá tu correo con el mensaje listo para revisar.
-                </p>
-                <div className="mt-5 grid grid-cols-1 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openJoinMail('system')}
-                    className="border border-white bg-white px-4 py-3 font-['Space_Grotesk'] text-xs font-black uppercase tracking-[0.16em] text-black transition hover:bg-transparent hover:text-white"
-                  >
-                    Usar mi app de correo
-                  </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openJoinMail('gmail')}
-                      className="border border-white/30 px-4 py-3 font-['Space_Grotesk'] text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:border-white hover:bg-white hover:text-black"
-                    >
-                      Gmail web
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openJoinMail('outlook')}
-                      className="border border-white/30 px-4 py-3 font-['Space_Grotesk'] text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:border-white hover:bg-white hover:text-black"
-                    >
-                      Outlook web
-                    </button>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMailChoiceOpen(false)}
-                  className="mt-4 text-xs uppercase tracking-[0.16em] text-white/60 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                {mailChoiceError && (
-                  <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-rose-300">
-                    {mailChoiceError}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </section>
 

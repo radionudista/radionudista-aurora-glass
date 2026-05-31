@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const languageSchema = z.enum(['es', 'pt', 'en']);
 export type EditorLanguage = z.infer<typeof languageSchema>;
 
+export const contentKindSchema = z.enum(['program', 'event']);
+export type ContentKind = z.infer<typeof contentKindSchema>;
+
 const localizedTextSchema = z
   .object({
     es: z.string(),
@@ -21,6 +24,8 @@ export const contentEntrySchema = z.object({
   slug: z.string().min(1),
   id: z.string().min(1),
   component: z.string().min(1),
+  /** `program` = archivo público; `event` = solo editores en archivos, metadata para el calendario. */
+  content_kind: contentKindSchema.optional(),
   public: z.boolean().optional(),
   program_order: z.number().optional(),
   date: z.string().optional(),
@@ -181,10 +186,14 @@ export const defaultAboutCredits: AboutCreditsData = {
 
 export const editorialSchema = z.object({
   home: z.object({
+    manifestKicker: localizedTextSchema.optional(),
     manifestTitle: localizedTextSchema,
     manifestSubtitle: localizedTextSchema,
     joinPanelCopy: localizedTextSchema,
-  }),
+  }).transform((home) => ({
+    ...home,
+    manifestKicker: home.manifestKicker ?? { es: '', pt: '', en: '' },
+  })),
   about: z
     .object({
       heroTitle: localizedTextSchema,

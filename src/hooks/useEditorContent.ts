@@ -1,12 +1,14 @@
-import contentIndexData from '../contentIndex.json';
 import { useOptionalEditor } from '../contexts/EditorContext';
+import { usePublicContent } from '../contexts/PublicContentContext';
 
 export const useContentIndexData = () => {
   const editor = useOptionalEditor();
-  return editor?.contentIndex ?? contentIndexData;
+  const publicContent = usePublicContent();
+  return editor?.contentIndex ?? publicContent.contentIndex;
 };
 
 export const useEditorialText = () => {
   const editor = useOptionalEditor();
-  return editor?.editorial ?? null;
+  const publicContent = usePublicContent();
+  return editor?.editorial ?? publicContent.editorial;
 };

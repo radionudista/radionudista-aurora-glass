@@ -1,22 +1,18 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import LanguageRouter from "./components/LanguageRouter";
 import { DebugProvider } from "./contexts/DebugContext";
+import { PublicContentProvider } from "./contexts/PublicContentContext";
 import { useLanguageDebugInfo } from "@/hooks/useLanguageDebugInfo";
 import { HelmetProvider } from 'react-helmet-async';
 
-/**
- * Calls useLanguageDebugInfo to register language info in DebugContext.
- * Must be rendered inside DebugProvider.
- */
 const LanguageDebugInfoProvider = () => {
   useLanguageDebugInfo();
   return null;
 };
-
-const queryClient = new QueryClient();
 
 const App = () => {
   return (
@@ -24,11 +20,12 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <DebugProvider>
-            <LanguageDebugInfoProvider /> {/* Now inside DebugProvider */}
+            <LanguageDebugInfoProvider />
             <Toaster />
             <Sonner />
-            <LanguageRouter />
-            {/* Hidden by request: keep debug data plumbing, but do not render bottom debug UI. */}
+            <PublicContentProvider>
+              <LanguageRouter />
+            </PublicContentProvider>
           </DebugProvider>
         </TooltipProvider>
       </QueryClientProvider>

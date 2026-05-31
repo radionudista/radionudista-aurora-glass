@@ -10,13 +10,15 @@ import HomePage from '../pages/HomePage';
 import AboutPage from '../pages/AboutPage';
 import NotFound from '../pages/NotFound';
 import SimplePage from '../pages/SimplePage';
-import { getContent } from '../lib/contentLoader';
+import { getContent, setContentIndexCache } from '../lib/contentLoader';
+import { usePublicContent } from '../contexts/PublicContentContext';
 import ProgramPage from '@/pages/ProgramPage';
 import TwitchOnlyPlayerPage from '@/pages/TwitchOnlyPlayerPage';
 import SchedulePage from '../pages/SchedulePage';
 import ProgramDetailPage from '../pages/ProgramDetailPage';
 import EpisodeDetailPage from '../pages/EpisodeDetailPage';
 import EditorLoginPage from '../pages/EditorLoginPage';
+import ContactPage from '../pages/ContactPage';
 
 /**
  * Language Router Component
@@ -58,17 +60,29 @@ const LanguageDetector: React.FC<{ children: React.ReactNode }> = ({ children })
     if (!isI18nReady) return;
 
     const currentPath = location.pathname;
+    if (currentPath === '/editor-login' || currentPath === '/editor_login') return;
+
     const pathSegments = currentPath.split('/').filter(Boolean);
     const firstSegment = pathSegments[0];
+    const remainder = pathSegments.slice(1).join('/');
 
     // Check if the first segment is a language code
-    const isLanguageInPath = env.SUPPORTED_LANGUAGES.includes(firstSegment);
+    const isLanguageInPath = firstSegment && env.SUPPORTED_LANGUAGES.includes(firstSegment);
+    const looksLikeLanguageCode = Boolean(firstSegment && /^[a-z]{2}$/i.test(firstSegment));
 
     if (isLanguageInPath) {
       // Language is already in the path, set it in i18n
       if (i18n.language !== firstSegment) {
         i18n.changeLanguage(firstSegment);
       }
+    } else if (looksLikeLanguageCode) {
+      // e.g. /en/schedule while VITE_SUPPORTED_LANGUAGES=es,pt — remap to a supported lang
+      const targetLang = LanguageUtils.mapToSupportedLanguage(
+        firstSegment,
+        env.SUPPORTED_LANGUAGES,
+        env.DEFAULT_LANGUAGE
+      );
+      navigate(`/${targetLang}${remainder ? `/${remainder}` : ''}`, { replace: true });
     } else {
       // No language in path, detect and redirect
       const browserLang = LanguageUtils.getBrowserPreferredLanguage();
@@ -98,6 +112,12 @@ const LanguageDetector: React.FC<{ children: React.ReactNode }> = ({ children })
 
 
 const AppRoutes: React.FC = () => {
+  const { contentIndex } = usePublicContent();
+
+  React.useEffect(() => {
+    setContentIndexCache(contentIndex);
+  }, [contentIndex]);
+
   return (
     <Routes>
       {/* Redirect root / to detected language path */}
@@ -109,6 +129,8 @@ const AppRoutes: React.FC = () => {
         <Route key={lang} path={`/${lang}`} element={<PagesLayout />}>
           <Route index element={<HomePage />} />
           <Route path="about" element={<AboutPage />} />
+          <Route path="contacto" element={<ContactPage />} />
+          <Route path="contact" element={<Navigate to="contacto" replace />} />
           <Route path="programacion" element={<ProgramPage />} />
           <Route path="programacion/:programId/:episodeId" element={<EpisodeDetailPage />} />
           <Route path="programacion/:programId" element={<ProgramDetailPage />} />
@@ -117,8 +139,9 @@ const AppRoutes: React.FC = () => {
           <Route path=":slug" element={<DynamicSimplePageWrapper lang={lang} />} />
         </Route>
       ))}
-      {/* Editor login route */}
+      {/* Editor login (misma ruta en local y prod) */}
       <Route path="/editor-login" element={<EditorLoginPage />} />
+      <Route path="/editor_login" element={<Navigate to="/editor-login" replace />} />
 
       {/* Catch-all route for 404 */}
       <Route path="*" element={<NotFound />} />
@@ -130,6 +153,9 @@ const AppRoutes: React.FC = () => {
 function DynamicSimplePageWrapper({ lang }: { lang: string }) {
   const { slug } = useParams();
   if (!slug) return <NotFound />;
+  if (slug === 'acerca-de-nosotros') {
+    return <Navigate to={`/${lang}/about`} replace />;
+  }
   const content = getContent(lang, slug);
   if (!content) return <NotFound />;
   return (

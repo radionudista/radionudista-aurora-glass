@@ -1,14 +1,15 @@
 import type { Plugin } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
 import { handleEditorRoute } from '../functions/_shared/editor/handlers';
-import { createLocalEditorStore } from '../functions/_shared/editor/localStore';
+import { assertSupabaseJwtAuthorized } from '../functions/_shared/supabaseJwtAuth';
 
 interface PluginOptions {
-  rootDir: string;
   enabled: boolean;
-  passwordHash?: string;
-  supportedLanguages?: string[];
+  supabase?: {
+    url?: string;
+    anonKey?: string;
+    serviceRoleKey?: string;
+  };
   archive?: {
     accessKey?: string;
     secretKey?: string;
@@ -27,22 +28,6 @@ const sendJson = (res: ServerResponse, code: number, data: unknown) => {
   res.end(JSON.stringify(data));
 };
 
-const safeCompare = (actual: string, expected: string): boolean => {
-  const actualBuffer = Buffer.from(actual);
-  const expectedBuffer = Buffer.from(expected);
-  return (
-    actualBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(actualBuffer, expectedBuffer)
-  );
-};
-
-const readEditorToken = (req: IncomingMessage): string => {
-  const header = req.headers['x-editor-token'] ?? req.headers.authorization;
-  const raw = Array.isArray(header) ? header[0] : header;
-  if (!raw) return '';
-  return raw.replace(/^Bearer\s+/i, '').trim();
-};
-
 const readBody = async (req: IncomingMessage): Promise<unknown> =>
   new Promise((resolve, reject) => {
     let raw = '';
@@ -59,11 +44,30 @@ const readBody = async (req: IncomingMessage): Promise<unknown> =>
     req.on('error', reject);
   });
 
+const readBinaryBody = async (req: IncomingMessage): Promise<ArrayBuffer> =>
+  new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      const buffer = Buffer.concat(chunks);
+      resolve(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+    });
+    req.on('error', reject);
+  });
+
+const headerRecord = (req: IncomingMessage): Record<string, string | undefined> =>
+  Object.fromEntries(
+    Object.entries(req.headers).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value[0] : value,
+    ])
+  );
+
 export const editorDevServerPlugin = ({
-  rootDir,
   enabled,
-  passwordHash,
-  supportedLanguages = ['es', 'pt', 'en'],
+  supabase,
   archive,
   translation,
 }: PluginOptions): Plugin => ({
@@ -72,41 +76,57 @@ export const editorDevServerPlugin = ({
   configureServer(server) {
     if (!enabled) return;
 
-    const store = createLocalEditorStore({
-      rootDir,
-      supportedLanguages,
-      gitRemote: process.env.EDITOR_GIT_REMOTE || 'origin',
-      gitBranch: process.env.EDITOR_GIT_BRANCH || 'master',
-      githubToken: process.env.EDITOR_GITHUB_TOKEN || '',
-    });
-
     server.middlewares.use('/__dev/editor', async (req, res) => {
       try {
-        const expectedHash = (passwordHash || process.env.VITE_EDITOR_PASSWORD_HASH || '').trim();
-        if (!expectedHash) {
-          return sendJson(res, 503, {
-            ok: false,
-            message: 'VITE_EDITOR_PASSWORD_HASH es obligatorio para usar el editor dev.',
-          });
-        }
+        const supabaseUrl = (
+          supabase?.url ||
+          process.env.SUPABASE_URL ||
+          process.env.VITE_SUPABASE_URL ||
+          ''
+        ).trim();
+        const supabaseAnonKey = (
+          supabase?.anonKey ||
+          process.env.SUPABASE_ANON_KEY ||
+          process.env.VITE_SUPABASE_ANON_KEY ||
+          ''
+        ).trim();
+        const serviceKey = (
+          supabase?.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+        ).trim();
 
-        if (!safeCompare(readEditorToken(req), expectedHash)) {
-          return sendJson(res, 401, {
-            ok: false,
-            message: 'Sesión del editor dev inválida. Volvé a /editor-login.',
-          });
+        const authRequest = new Request('http://local/__dev/editor', {
+          method: req.method || 'GET',
+          headers: Object.fromEntries(
+            Object.entries(req.headers).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? value[0] : value ?? '',
+            ])
+          ),
+        });
+
+        const authError = await assertSupabaseJwtAuthorized(authRequest, {
+          SUPABASE_URL: supabaseUrl,
+          SUPABASE_ANON_KEY: supabaseAnonKey,
+        });
+        if (authError) {
+          const payload = await authError.json();
+          return sendJson(res, authError.status, payload);
         }
 
         const url = req.url || '/';
         const subpath = url.replace(/^\//, '').split('?')[0];
         const method = req.method || 'GET';
-        const body = method === 'GET' ? {} : await readBody(req);
+        const requestHeaders = headerRecord(req);
+        const isAudioProxy = method === 'POST' && subpath === 'upload-episode-audio-proxy';
+        const body = method === 'GET' || isAudioProxy ? {} : await readBody(req);
+        const binaryBody = isAudioProxy ? await readBinaryBody(req) : undefined;
 
         const result = await handleEditorRoute({
           method,
           subpath,
           body,
-          store,
+          binaryBody,
+          requestHeaders,
           runtime: 'local',
           config: {
             archive: {
@@ -127,7 +147,10 @@ export const editorDevServerPlugin = ({
                 translation?.monthlyCharLimit || process.env.EDITOR_TRANSLATE_MONTHLY_CHAR_LIMIT || 500000
               ),
             },
-            supportedLanguages,
+          },
+          supabaseEnv: {
+            SUPABASE_URL: supabaseUrl,
+            SUPABASE_SERVICE_ROLE_KEY: serviceKey,
           },
         });
 

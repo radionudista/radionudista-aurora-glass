@@ -6,7 +6,8 @@ import { calendarService } from '../services/calendarService';
 import { findLiveEvent, resolveLiveProgram, type ResolvedLiveProgram } from '../utils/liveSchedule';
 import { useContentIndexData } from './useEditorContent';
 
-const FALLBACK_LOGO = '/images/logo-radionudista-negro.png';
+import { DEFAULT_PROGRAM_LOGO, resolveProgramLogoSrc } from '../utils/programLogo';
+
 const HOME_RECENT_LIMIT = 4;
 const HOME_LOOKBACK_WEEKS = 8;
 
@@ -80,9 +81,9 @@ export function useLiveProgram() {
   }, [events, i18n.language, contentIndexData]);
 
   const heroImageUrl = useMemo(() => {
-    if (!live.liveEvent) return FALLBACK_LOGO;
-    if (live.program?.logoFile) return `/images/logos/${live.program.logoFile}`;
-    return FALLBACK_LOGO;
+    if (!live.liveEvent) return DEFAULT_PROGRAM_LOGO;
+    if (live.program?.logoFile) return resolveProgramLogoSrc(live.program.logoFile);
+    return DEFAULT_PROGRAM_LOGO;
   }, [live.liveEvent, live.program]);
 
   return {
@@ -97,4 +98,4 @@ export function useLiveProgram() {
   };
 }
 
-export { FALLBACK_LOGO };
+export { DEFAULT_PROGRAM_LOGO as FALLBACK_LOGO };
