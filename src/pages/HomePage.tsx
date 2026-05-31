@@ -12,7 +12,11 @@ import { resolveEditorialText } from '../utils/editorialText';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import { useArchivePlayer } from '../contexts/ArchivePlayerContext';
 import InlineEditableText from '../components/InlineEditableText';
-import { resolveProgramLogoSrc } from '../utils/programLogo';
+import EditableImageField from '../components/EditableImageField';
+import {
+  DEFAULT_PROGRAM_LOGO,
+  resolveProgramLogoSrc,
+} from '../utils/programLogo';
 
 const HOME_MANIFEST_VIDEO_STORAGE_KEY = 'rn.home.manifest.video.queue';
 const HOME_MANIFEST_VIDEO_LOAD_MARK_KEY = 'rn.home.manifest.video.load-mark';
@@ -141,6 +145,37 @@ const HomePage = () => {
   const manifestSubtitle =
     resolveEditorialText(editorial?.home.manifestSubtitle, lang) || t('home.manifest-subtitle');
 
+  const defaultHeroUrl = resolveProgramLogoSrc(
+    editorial?.home.defaultHeroImageUrl?.trim() || DEFAULT_PROGRAM_LOGO
+  );
+  const displayHeroUrl = isLive ? heroImageUrl : defaultHeroUrl;
+  const defaultHeroValue = editorial?.home.defaultHeroImageUrl?.trim() ?? '';
+  const hasCustomHomeHero =
+    defaultHeroValue !== '' && defaultHeroValue !== DEFAULT_PROGRAM_LOGO;
+
+  const homeHeroEditor = editor?.enabled ? (
+    <div className="absolute left-3 top-14 z-20 w-[min(100%,19rem)] md:left-4 md:top-20">
+      <EditableImageField
+        label="Imagen del home (sin programa en vivo)"
+        previewSrc={defaultHeroUrl}
+        valueForEdit={defaultHeroValue}
+        uploadScope="home-hero"
+        programId="home"
+        onCommit={(next) => editor.commitHomeDefaultHeroImage(next)}
+        onAfterFileUpload={(url, message) => editor.applyUploadedHomeHero(url, message)}
+        canReset={hasCustomHomeHero}
+        onReset={() => editor.commitHomeDefaultHeroImage('')}
+        resetLabel="Quitar imagen (volver al logo)"
+        helpText="Se muestra cuando no hay programa en antena. En vivo se usa el logo del programa."
+      />
+      {isLive ? (
+        <p className="mt-2 border border-amber-400/30 bg-black/75 px-2 py-1.5 font-mono text-[9px] uppercase tracking-wider text-amber-200/80">
+          Ahora en vivo: el fondo usa el logo del programa.
+        </p>
+      ) : null}
+    </div>
+  ) : null;
+
   return (
     <section className="relative flex-1 w-full bg-black">
       <div className="relative min-h-[calc(100dvh-5rem)] overflow-hidden">
@@ -148,12 +183,14 @@ const HomePage = () => {
         <div
           className="absolute inset-0 bg-black bg-no-repeat bg-center transition-[background-image] duration-500"
           style={{
-            backgroundImage: `url(${heroImageUrl})`,
+            backgroundImage: `url(${displayHeroUrl})`,
             backgroundSize: 'cover',
           }}
           role="img"
           aria-label={program?.title ?? 'Radio Nudista'}
         />
+
+        {homeHeroEditor}
 
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/65"

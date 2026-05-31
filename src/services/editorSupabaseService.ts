@@ -189,7 +189,7 @@ export const editorSupabaseService = {
   },
 
   async uploadImage(input: {
-    scope: 'program-logo' | 'episode-cover';
+    scope: 'program-logo' | 'episode-cover' | 'home-hero';
     programId: string;
     episodeId?: string;
     mimeType: string;
@@ -200,13 +200,20 @@ export const editorSupabaseService = {
     const ext = MIME_TO_EXT[mimeType];
     if (!ext) throw new Error('Tipo de imagen no permitido (usa PNG, JPEG o WebP).');
 
-    const bucket = input.scope === 'program-logo' ? 'program-logos' : 'episode-covers';
+    const bucket =
+      input.scope === 'program-logo'
+        ? 'program-logos'
+        : input.scope === 'home-hero'
+          ? 'home-hero'
+          : 'episode-covers';
     const ts = Date.now();
     const prog = input.programId.replace(/[^a-z0-9-]/gi, '-');
     const fileName =
-      input.scope === 'program-logo'
-        ? `${prog}-${ts}${ext}`
-        : `${prog}-${(input.episodeId || 'ep').replace(/[^a-z0-9-]/gi, '-')}-${ts}${ext}`;
+      input.scope === 'home-hero'
+        ? `hero-${ts}${ext}`
+        : input.scope === 'program-logo'
+          ? `${prog}-${ts}${ext}`
+          : `${prog}-${(input.episodeId || 'ep').replace(/[^a-z0-9-]/gi, '-')}-${ts}${ext}`;
 
     const { error } = await supabase.storage.from(bucket).upload(fileName, buffer, {
       contentType: mimeType,
@@ -215,6 +222,10 @@ export const editorSupabaseService = {
     if (error) throw new Error(error.message);
 
     const { data: publicUrl } = supabase.storage.from(bucket).getPublicUrl(fileName);
+
+    if (input.scope === 'home-hero') {
+      return { coverPublicPath: publicUrl.publicUrl, message: 'Imagen del home guardada en Supabase Storage.' };
+    }
 
     if (input.scope === 'program-logo') {
       await supabase.from('content_items').update({ logo_url: publicUrl.publicUrl }).eq('id', input.programId);

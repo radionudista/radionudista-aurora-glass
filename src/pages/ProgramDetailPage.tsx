@@ -16,8 +16,6 @@ import { useContentIndexData } from '../hooks/useEditorContent';
 import { useOptionalEditor } from '../contexts/EditorContext';
 import { useArchivePlayer } from '../contexts/ArchivePlayerContext';
 import { uploadEpisodeAudioDirectToArchive } from '../services/episodeArchiveUploadService';
-import { useEpisodeAudioAvailability, getEpisodeAudioUiState } from '../hooks/useEpisodeAudioAvailability';
-import { episodeNeedsAudioAvailabilityCheck } from '../utils/episodeAudioAvailability';
 import EditableImageField from '../components/EditableImageField';
 import EditableStringListItem from '../components/EditableStringListItem';
 import InlineEditableText from '../components/InlineEditableText';
@@ -284,12 +282,6 @@ const ProgramDetailPage: React.FC = () => {
     );
   }, [editor?.enabled, sortedEpisodes, scheduleMeta]);
 
-  const shouldCheckArchiveAudio = visibleEpisodes.some(episodeNeedsAudioAvailabilityCheck);
-  const episodeAudioAvailability = useEpisodeAudioAvailability(
-    visibleEpisodes,
-    shouldCheckArchiveAudio
-  );
-
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(i18n.language, {
@@ -322,8 +314,6 @@ const ProgramDetailPage: React.FC = () => {
   ) : null;
 
   const playEpisode = (ep: Episode) => {
-    const availability = getEpisodeAudioUiState(ep, episodeAudioAvailability);
-    if (availability === 'pending' || availability === 'checking') return;
     archivePlayer.openEpisode({
       episodeId: ep.id,
       audioUrl: ep.audioUrl,
@@ -842,10 +832,6 @@ const ProgramDetailPage: React.FC = () => {
                 {visibleEpisodes.map((ep) => {
                   const episodePath = `/${currentLang}/programacion/${encodeURIComponent(program.id)}/${encodeURIComponent(ep.id)}`;
                   const cardCover = resolveCoverSrc(ep, program.logo ?? null);
-                  const audioUiState = getEpisodeAudioUiState(ep, episodeAudioAvailability);
-                  const audioPending = audioUiState === 'pending';
-                  const audioChecking = audioUiState === 'checking';
-                  const playDisabled = audioPending || audioChecking;
                   return (
                   <article
                     key={ep.id}
@@ -863,29 +849,17 @@ const ProgramDetailPage: React.FC = () => {
                         aria-hidden
                       />
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-black/20" />
-                      {audioPending ? (
-                        <div className="absolute right-3 top-3 z-10 border border-amber-400/50 bg-amber-500/15 px-2 py-1 font-['Space_Grotesk'] text-[9px] font-bold uppercase tracking-[0.14em] text-amber-100">
-                          {t('program-detail.audio-processing')}
-                        </div>
-                      ) : null}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
                           playEpisode(ep);
                         }}
-                        disabled={playDisabled}
-                        className="absolute bottom-3 left-3 z-10 inline-flex h-9 items-center gap-2 border border-white/35 bg-black/65 px-3 font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-45"
+                        className="absolute bottom-3 left-3 z-10 inline-flex h-9 items-center gap-2 border border-white/35 bg-black/65 px-3 font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-black/85"
                         aria-label={`${t('program-detail.play-episode')}: ${ep.title}`}
                       >
-                        {audioChecking ? (
-                          <span className="inline-block h-3 w-3 animate-spin rounded-full border border-white/30 border-t-white" />
-                        ) : (
-                          <span className="inline-block h-0 w-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-white" />
-                        )}
-                        {audioPending
-                          ? t('program-detail.audio-unavailable')
-                          : t('program-detail.play-episode')}
+                        <span className="inline-block h-0 w-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-white" />
+                        {t('program-detail.play-episode')}
                       </button>
                     </div>
 

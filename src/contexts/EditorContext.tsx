@@ -85,6 +85,8 @@ interface EditorContextValue {
     values: LocalizedTextValues
   ) => Promise<void>;
   commitAboutCredits: (next: AboutCreditsData) => Promise<void>;
+  commitHomeDefaultHeroImage: (url: string) => Promise<void>;
+  applyUploadedHomeHero: (url: string, uploadMessage: string) => Promise<void>;
   createProgram: (payload: CreateProgramPayload) => Promise<string | null>;
   deleteProgram: (payload: DeleteProgramPayload) => Promise<boolean>;
   loadEpisodes: (programId: string) => Promise<void>;
@@ -128,6 +130,7 @@ const emptyEditorial = (): EditorialData => ({
     manifestTitle: { es: '', pt: '', en: '' },
     manifestSubtitle: { es: '', pt: '', en: '' },
     joinPanelCopy: { es: '', pt: '', en: '' },
+    defaultHeroImageUrl: '',
   },
   about: {
     heroTitle: { es: '', pt: '', en: '' },
@@ -794,6 +797,26 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     await refreshPublicContent();
   };
 
+  const commitHomeDefaultHeroImage = async (url: string) => {
+    const nextEditorial = clone(editorial);
+    nextEditorial.home = { ...nextEditorial.home, defaultHeroImageUrl: url };
+    setEditorial(nextEditorial);
+    const response = await editorSupabaseService.savePayload({ editorial: nextEditorial });
+    setBaseEditorial(clone(nextEditorial));
+    setMessage(response.message);
+    await refreshPublicContent();
+  };
+
+  const applyUploadedHomeHero = async (url: string, uploadMessage: string) => {
+    const nextEditorial = clone(editorial);
+    nextEditorial.home = { ...nextEditorial.home, defaultHeroImageUrl: url };
+    setEditorial(nextEditorial);
+    const response = await editorSupabaseService.savePayload({ editorial: nextEditorial });
+    setBaseEditorial(clone(nextEditorial));
+    setMessage(response.message || uploadMessage);
+    await refreshPublicContent();
+  };
+
   const createProgram = async (payload: CreateProgramPayload): Promise<string | null> => {
     if (!active) return null;
     setSaving(true);
@@ -888,6 +911,8 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     commitEditorialField,
     commitEditorialFieldLocalized,
     commitAboutCredits,
+    commitHomeDefaultHeroImage,
+    applyUploadedHomeHero,
     createProgram,
     deleteProgram,
     loadEpisodes,
