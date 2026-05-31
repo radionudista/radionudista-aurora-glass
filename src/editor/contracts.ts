@@ -190,9 +190,12 @@ export const editorialSchema = z.object({
     manifestTitle: localizedTextSchema,
     manifestSubtitle: localizedTextSchema,
     joinPanelCopy: localizedTextSchema,
+    /** Imagen de fondo del hero cuando no hay programa en vivo (ruta /public o URL de Storage). */
+    defaultHeroImageUrl: z.string().optional(),
   }).transform((home) => ({
     ...home,
     manifestKicker: home.manifestKicker ?? { es: '', pt: '', en: '' },
+    defaultHeroImageUrl: home.defaultHeroImageUrl ?? '',
   })),
   about: z
     .object({

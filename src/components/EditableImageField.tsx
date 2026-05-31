@@ -7,12 +7,16 @@ export interface EditableImageFieldProps {
   previewSrc: string;
   /** Valor en JSON: nombre de logo (ej. 2.png) o ruta/URL de portada */
   valueForEdit: string;
-  uploadScope: 'program-logo' | 'episode-cover';
+  uploadScope: 'program-logo' | 'episode-cover' | 'home-hero';
   programId: string;
   episodeId?: string;
   onCommit: (nextValue: string) => Promise<void>;
   /** Tras subir archivo: DB ya actualizada en uploadImage; evita re-guardar todo el índice. */
   onAfterFileUpload?: (url: string, message: string) => Promise<void>;
+  /** Muestra botón para volver al valor por defecto (p. ej. logo original del home). */
+  canReset?: boolean;
+  onReset?: () => Promise<void>;
+  resetLabel?: string;
   helpText?: string;
 }
 
@@ -33,6 +37,9 @@ const EditableImageField: React.FC<EditableImageFieldProps> = ({
   episodeId,
   onCommit,
   onAfterFileUpload,
+  canReset = false,
+  onReset,
+  resetLabel = 'Restaurar original',
   helpText,
 }) => {
   const [busy, setBusy] = React.useState(false);
@@ -83,6 +90,20 @@ const EditableImageField: React.FC<EditableImageFieldProps> = ({
     }
   };
 
+  const onClickReset = async () => {
+    if (!onReset) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await onReset();
+      setPreviewOverride(null);
+    } catch (er) {
+      setErr(er instanceof Error ? er.message : 'No se pudo restaurar');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-2 border border-white/20 bg-black/80 p-3 text-white">
       <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/55">{label}</p>
@@ -104,6 +125,16 @@ const EditableImageField: React.FC<EditableImageFieldProps> = ({
           className="w-full text-[11px] text-white file:me-2 file:border file:border-white/30 file:bg-transparent file:px-2 file:py-1 file:text-[10px] file:uppercase file:tracking-wider"
         />
       </label>
+      {canReset && onReset ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void onClickReset()}
+          className="w-full border border-red-400/35 bg-red-500/10 px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
+        >
+          {resetLabel}
+        </button>
+      ) : null}
       <div className="text-[10px] text-white/45">
         <InlineEditableText
           multiline={uploadScope === 'episode-cover'}

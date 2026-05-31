@@ -23,6 +23,10 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit)
 VALUES ('episode-audio', 'episode-audio', true, 536870912)
 ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 536870912;
 
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('home-hero', 'home-hero', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
 -- ---------------------------------------------------------------------------
 -- 2. Policies en storage.objects (idempotente: borra y recrea)
 -- ---------------------------------------------------------------------------
@@ -107,3 +111,30 @@ CREATE POLICY "episode_audio_authenticated_delete"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'episode-audio');
+
+-- home-hero: lectura pública
+DROP POLICY IF EXISTS "home_hero_public_read" ON storage.objects;
+CREATE POLICY "home_hero_public_read"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'home-hero');
+
+-- home-hero: subida / reemplazo
+DROP POLICY IF EXISTS "home_hero_authenticated_insert" ON storage.objects;
+CREATE POLICY "home_hero_authenticated_insert"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'home-hero');
+
+DROP POLICY IF EXISTS "home_hero_authenticated_update" ON storage.objects;
+CREATE POLICY "home_hero_authenticated_update"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'home-hero')
+WITH CHECK (bucket_id = 'home-hero');
+
+DROP POLICY IF EXISTS "home_hero_authenticated_delete" ON storage.objects;
+CREATE POLICY "home_hero_authenticated_delete"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'home-hero');
