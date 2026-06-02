@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { env } from '../config/env';
 import { getSupabaseClient, isEditorAvailable } from '../lib/supabaseClient';
+import { fetchEditorProfile } from '../services/editorProfileService';
 import { FormContainer, FormField, FormInput, FormButton } from '../components/ui/FormComponents';
 import { FALLBACK_LOGO } from '../hooks/useLiveProgram';
 
@@ -45,6 +46,23 @@ const EditorLoginPage: React.FC = () => {
       if (signInError) {
         setError(signInError.message || 'Credenciales inválidas.');
         setPassword('');
+        return;
+      }
+      const profile = await fetchEditorProfile();
+      if (!profile) {
+        await supabase.auth.signOut();
+        setError('No tenés perfil de editor. Contactá a un administrador.');
+        return;
+      }
+      if (profile.disabledAt) {
+        await supabase.auth.signOut();
+        setError('Tu cuenta de editor está desactivada.');
+        return;
+      }
+      if (profile.role === 'editor' && profile.programId) {
+        navigate(`/${env.DEFAULT_LANGUAGE}/programacion/${encodeURIComponent(profile.programId)}`, {
+          replace: true,
+        });
         return;
       }
       navigate(`/${env.DEFAULT_LANGUAGE}`, { replace: true });
