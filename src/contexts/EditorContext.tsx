@@ -28,6 +28,14 @@ import {
   isEditorAvailable,
   subscribeAuth,
 } from '../lib/supabaseClient';
+import {
+  canEditEditorial as profileCanEditEditorial,
+  canEditProgram as profileCanEditProgram,
+  canManagePrograms as profileCanManagePrograms,
+  fetchEditorProfile,
+  type EditorProfile,
+  type EditorRole,
+} from '../services/editorProfileService';
 import { useOptionalPublicContent } from './PublicContentContext';
 import { mapRouteToContentIndexLanguage } from '../utils/contentLanguage';
 import { queryClient } from '../lib/queryClient';
@@ -37,6 +45,12 @@ type LocalizedTextValues = Record<EditorLanguage, string>;
 interface EditorContextValue {
   enabled: boolean;
   authenticated: boolean;
+  role: EditorRole | null;
+  isAdmin: boolean;
+  assignedProgramId: string | null;
+  canEditProgram: (programId: string) => boolean;
+  canEditEditorial: () => boolean;
+  canManagePrograms: () => boolean;
   loading: boolean;
   saving: boolean;
   isDirty: boolean;
@@ -184,7 +198,33 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
   const editorAvailable = isEditorAvailable();
   const [authenticated, setAuthenticated] = React.useState(false);
-  const active = editorAvailable && authenticated;
+  const [profile, setProfile] = React.useState<EditorProfile | null>(null);
+  const active = editorAvailable && authenticated && Boolean(profile) && !profile?.disabledAt;
+
+  const canEditProgram = React.useCallback(
+    (programId: string) => profileCanEditProgram(profile, programId),
+    [profile]
+  );
+  const canEditEditorial = React.useCallback(() => profileCanEditEditorial(profile), [profile]);
+  const canManagePrograms = React.useCallback(() => profileCanManagePrograms(profile), [profile]);
+
+  const denyProgramEdit = React.useCallback((programId: string): boolean => {
+    if (canEditProgram(programId)) return false;
+    setMessage('No tenés permiso para editar este programa.');
+    return true;
+  }, [canEditProgram]);
+
+  const denyEditorialEdit = React.useCallback((): boolean => {
+    if (canEditEditorial()) return false;
+    setMessage('Solo administradores pueden editar textos del sitio.');
+    return true;
+  }, [canEditEditorial]);
+
+  const denyManagePrograms = React.useCallback((): boolean => {
+    if (canManagePrograms()) return false;
+    setMessage('Solo administradores pueden gestionar programas.');
+    return true;
+  }, [canManagePrograms]);
   const [loading, setLoading] = React.useState(editorAvailable);
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -213,6 +253,54 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   React.useEffect(() => {
+    if (!authenticated) {
+      setProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const nextProfile = await fetchEditorProfile();
+        if (cancelled) return;
+        if (!nextProfile) {
+          const client = getSupabaseClient();
+          if (client) await client.auth.signOut();
+          setAuthenticated(false);
+          setProfile(null);
+          setMessage('No tenés perfil de editor. Contactá a un administrador.');
+          return;
+        }
+        if (nextProfile.disabledAt) {
+          const client = getSupabaseClient();
+          if (client) await client.auth.signOut();
+          setAuthenticated(false);
+          setProfile(null);
+          setMessage('Tu cuenta de editor está desactivada.');
+          return;
+        }
+        if (nextProfile.role === 'editor' && !nextProfile.programId) {
+          const client = getSupabaseClient();
+          if (client) await client.auth.signOut();
+          setAuthenticated(false);
+          setProfile(null);
+          setMessage('Tu cuenta no tiene un programa asignado.');
+          return;
+        }
+        setProfile(nextProfile);
+      } catch (error) {
+        if (cancelled) return;
+        setProfile(null);
+        setMessage(error instanceof Error ? error.message : 'Error al cargar perfil de editor.');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated]);
+
+  React.useEffect(() => {
     if (authenticated) return;
     if (publicContent?.contentIndex) {
       setContentIndex(publicContent.contentIndex);
@@ -233,11 +321,12 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const client = getSupabaseClient();
     if (client) await client.auth.signOut();
     setAuthenticated(false);
+    setProfile(null);
     setMessage('Modo editor desactivado.');
   }, []);
 
   React.useEffect(() => {
-    if (!editorAvailable || !authenticated) {
+    if (!editorAvailable || !authenticated || !profile) {
       setLoading(false);
       return;
     }
@@ -245,17 +334,24 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [content, editorialData] = await Promise.all([
-          fetchEditorContentIndexFromSupabase(),
-          fetchEditorialFromSupabase(),
-        ]);
+        const contentFilter =
+          profile.role === 'editor' && profile.programId
+            ? { programId: profile.programId }
+            : undefined;
+        const content = await fetchEditorContentIndexFromSupabase(contentFilter);
         if (content) {
           setContentIndex(content);
           setBaseContentIndex(clone(content));
         }
-        if (editorialData) {
-          setEditorial(editorialData);
-          setBaseEditorial(clone(editorialData));
+        if (profile.role === 'admin') {
+          const editorialData = await fetchEditorialFromSupabase();
+          if (editorialData) {
+            setEditorial(editorialData);
+            setBaseEditorial(clone(editorialData));
+          }
+        } else {
+          setEditorial(emptyEditorial());
+          setBaseEditorial(emptyEditorial());
         }
       } catch (error) {
         setMessage(error instanceof Error ? error.message : 'Error al cargar el editor.');
@@ -265,14 +361,17 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     void loadInitialData();
-  }, [authenticated, editorAvailable]);
+  }, [authenticated, editorAvailable, profile]);
 
   React.useEffect(() => {
-    if (!editorAvailable || !authenticated) return;
+    if (!editorAvailable || !authenticated || !profile) return;
+
+    const contentFilter =
+      profile.role === 'editor' && profile.programId ? { programId: profile.programId } : undefined;
 
     const resyncFromDb = () => {
       if (document.hidden) return;
-      void fetchEditorContentIndexFromSupabase()
+      void fetchEditorContentIndexFromSupabase(contentFilter)
         .then((content) => {
           if (!content) return;
           setContentIndex(content);
@@ -283,7 +382,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     document.addEventListener('visibilitychange', resyncFromDb);
     return () => document.removeEventListener('visibilitychange', resyncFromDb);
-  }, [authenticated, editorAvailable]);
+  }, [authenticated, editorAvailable, profile]);
 
   const updateContentField = (programId: string, lang: EditorLanguage, field: string, value: unknown) => {
     setContentIndex((prev) => {
@@ -302,6 +401,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     field: string,
     value: unknown
   ) => {
+    if (denyProgramEdit(programId)) return;
     const nextContent = clone(contentIndex);
     const entry = nextContent?.[programId] as Record<string, unknown> | undefined;
     if (!entry) return;
@@ -320,6 +420,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     field: string,
     values: LocalizedTextValues
   ) => {
+    if (denyProgramEdit(programId)) return;
     const nextContent = clone(contentIndex);
     const entry = nextContent?.[programId];
     if (!entry) return;
@@ -335,6 +436,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const commitContentFieldAllLanguages = async (programId: string, field: string, value: unknown) => {
+    if (denyProgramEdit(programId)) return;
     const nextContent = clone(contentIndex);
     const entry = nextContent?.[programId];
     if (!entry) return;
@@ -351,6 +453,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   /** Tras subir logo: Storage + logo_url ya están en DB; sincroniza estado local y contenido público. */
   const applyUploadedProgramLogo = async (programId: string, url: string, uploadMessage: string) => {
+    if (denyProgramEdit(programId)) return;
     setContentIndex((prev) => {
       const next = clone(prev);
       const entry = next[programId];
@@ -370,7 +473,9 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return next;
     });
 
-    const content = await fetchEditorContentIndexFromSupabase();
+    const contentFilter =
+      profile?.role === 'editor' && profile.programId ? { programId: profile.programId } : undefined;
+    const content = await fetchEditorContentIndexFromSupabase(contentFilter);
     if (content) {
       setContentIndex(content);
       setBaseContentIndex(clone(content));
@@ -386,6 +491,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     url: string,
     uploadMessage: string
   ) => {
+    if (denyProgramEdit(programId)) return;
     setEpisodesByProgram((prev) => {
       const next = clone(prev);
       const program = next[programId];
@@ -415,6 +521,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     programId: string,
     fields: Record<string, unknown>
   ) => {
+    if (denyProgramEdit(programId)) return;
     const nextContent = clone(contentIndex);
     const entry = nextContent?.[programId];
     if (!entry) return;
@@ -450,6 +557,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const episodesLoaded = React.useRef(new Set<string>());
 
   const loadEpisodes = React.useCallback(async (programId: string) => {
+    if (!profileCanEditProgram(profile, programId)) return;
     if (episodesLoaded.current.has(programId)) return;
 
     const inFlight = episodesLoadInFlight.current.get(programId);
@@ -468,7 +576,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     episodesLoadInFlight.current.set(programId, promise);
     return promise;
-  }, [routeLang]);
+  }, [routeLang, profile]);
 
   const updateEpisodeField = (programId: string, episodeId: string, field: string, value: unknown) => {
     setEpisodesByProgram((prev) => {
@@ -488,6 +596,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     field: string,
     value: unknown
   ) => {
+    if (denyProgramEdit(programId)) return;
     const sourceProgram =
       episodesByProgram[programId] ??
       (await devEditorService.fetchProgramEpisodes(programId).catch(
@@ -530,6 +639,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       archiveIdentifier?: string;
     }
   ): Promise<string | null> => {
+    if (denyProgramEdit(programId)) return null;
     const sourceProgram =
       episodesByProgram[programId] ??
       (await devEditorService.fetchProgramEpisodes(programId).catch(
@@ -562,6 +672,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const removeEpisode = async (programId: string, episodeId: string) => {
     if (!active) return;
+    if (denyProgramEdit(programId)) return;
 
     const sourceProgram =
       episodesByProgram[programId] ??
@@ -606,6 +717,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const restoreEpisode = async (programId: string, episodeId: string) => {
     if (!active) return;
+    if (denyProgramEdit(programId)) return;
 
     const trash = episodesTrashByProgram[programId];
     const episode = trash?.episodes.find((item) => item.id === episodeId);
@@ -641,6 +753,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const purgeEpisode = async (programId: string, episodeId: string) => {
+    if (denyProgramEdit(programId)) return;
     setEpisodesTrashByProgram((prev) => {
       const next = clone(prev);
       const trash = next[programId];
@@ -749,6 +862,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     lang: EditorLanguage,
     value: string
   ) => {
+    if (denyEditorialEdit()) return;
     const nextEditorial = clone(editorial);
     const target = (nextEditorial[section] as Record<string, unknown>)[field] as Record<string, string> | undefined;
     if (!target) return;
@@ -766,6 +880,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     field: string,
     values: LocalizedTextValues
   ) => {
+    if (denyEditorialEdit()) return;
     const nextEditorial = clone(editorial);
     const target = (nextEditorial[section] as Record<string, unknown>)[field] as
       | Record<string, string>
@@ -788,6 +903,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const commitAboutCredits = async (nextCredits: AboutCreditsData) => {
+    if (denyEditorialEdit()) return;
     const nextEditorial = clone(editorial);
     nextEditorial.about = { ...nextEditorial.about, credits: nextCredits };
     setEditorial(nextEditorial);
@@ -798,6 +914,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const commitHomeDefaultHeroImage = async (url: string) => {
+    if (denyEditorialEdit()) return;
     const nextEditorial = clone(editorial);
     nextEditorial.home = { ...nextEditorial.home, defaultHeroImageUrl: url };
     setEditorial(nextEditorial);
@@ -808,6 +925,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const applyUploadedHomeHero = async (url: string, uploadMessage: string) => {
+    if (denyEditorialEdit()) return;
     const nextEditorial = clone(editorial);
     nextEditorial.home = { ...nextEditorial.home, defaultHeroImageUrl: url };
     setEditorial(nextEditorial);
@@ -819,6 +937,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const createProgram = async (payload: CreateProgramPayload): Promise<string | null> => {
     if (!active) return null;
+    if (denyManagePrograms()) return null;
     setSaving(true);
     try {
       const res = await editorSupabaseService.createProgram(payload);
@@ -844,6 +963,8 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteProgram = async (payload: DeleteProgramPayload): Promise<boolean> => {
     if (!active) return false;
+    if (denyManagePrograms()) return false;
+    if (denyProgramEdit(payload.id)) return false;
     setSaving(true);
     try {
       const res = await editorSupabaseService.deleteProgram(payload);
@@ -891,6 +1012,12 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value: EditorContextValue = {
     enabled: active,
     authenticated,
+    role: profile?.role ?? null,
+    isAdmin: profile?.role === 'admin',
+    assignedProgramId: profile?.programId ?? null,
+    canEditProgram,
+    canEditEditorial,
+    canManagePrograms,
     loading,
     saving,
     isDirty,
