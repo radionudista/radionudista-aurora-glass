@@ -1,7 +1,7 @@
 import type { Plugin } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { handleEditorRoute } from '../functions/_shared/editor/handlers';
-import { assertSupabaseJwtAuthorized } from '../functions/_shared/supabaseJwtAuth';
+import { assertEditorAuthorized } from '../functions/_shared/editorAuth';
 
 interface PluginOptions {
   enabled: boolean;
@@ -104,17 +104,19 @@ export const editorDevServerPlugin = ({
           ),
         });
 
-        const authError = await assertSupabaseJwtAuthorized(authRequest, {
-          SUPABASE_URL: supabaseUrl,
-          SUPABASE_ANON_KEY: supabaseAnonKey,
-        });
-        if (authError) {
-          const payload = await authError.json();
-          return sendJson(res, authError.status, payload);
-        }
-
         const url = req.url || '/';
         const subpath = url.replace(/^\//, '').split('?')[0];
+
+        const authResult = await assertEditorAuthorized(authRequest, {
+          SUPABASE_URL: supabaseUrl,
+          SUPABASE_ANON_KEY: supabaseAnonKey,
+        }, {
+          requireAdmin: subpath.startsWith('admin/'),
+        });
+        if ('error' in authResult) {
+          const payload = await authResult.error.json();
+          return sendJson(res, authResult.error.status, payload);
+        }
         const method = req.method || 'GET';
         const requestHeaders = headerRecord(req);
         const isAudioProxy = method === 'POST' && subpath === 'upload-episode-audio-proxy';
@@ -150,8 +152,10 @@ export const editorDevServerPlugin = ({
           },
           supabaseEnv: {
             SUPABASE_URL: supabaseUrl,
+            SUPABASE_ANON_KEY: supabaseAnonKey,
             SUPABASE_SERVICE_ROLE_KEY: serviceKey,
           },
+          authProfile: authResult.profile,
         });
 
         return sendJson(res, result.status, result.body);
