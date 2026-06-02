@@ -154,7 +154,7 @@ const ProgramDetailPage: React.FC = () => {
 
   const isEvent = program ? isCalendarEventEntry(program) : false;
   const canEditThisProgram = Boolean(
-    canEditThisProgram && program?.id && editor.canEditProgram(program.id)
+    editor?.enabled && program?.id && editor.canEditProgram(program.id)
   );
   const canManagePrograms = Boolean(editor?.enabled && editor.canManagePrograms());
   const logoSrc = program?.logo ? resolveProgramLogoSrc(program.logo) : null;
