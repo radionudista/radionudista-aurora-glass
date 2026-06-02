@@ -23,31 +23,7 @@
     "schedule": "programação",
     "transmitting": "NO AR...",
     "login": "Login",
-    "logout-editor": "Sair do editor",
-    "admin": "Admin"
-  },
-  "admin-users": {
-    "title": "Usuários do editor",
-    "subtitle": "Criar contas e atribuir programa a cada editor",
-    "create-title": "Novo usuário",
-    "email": "Email",
-    "password": "Senha",
-    "role": "Função",
-    "role-editor": "Editor (um programa)",
-    "role-admin": "Administrador",
-    "program": "Programa",
-    "program-placeholder": "Escolher programa…",
-    "create-submit": "Criar usuário",
-    "col-email": "Email",
-    "col-role": "Função",
-    "col-program": "Programa",
-    "col-status": "Estado",
-    "col-actions": "Ações",
-    "status-active": "Ativo",
-    "status-disabled": "Desativado",
-    "action-disable": "Desativar",
-    "action-enable": "Ativar",
-    "empty": "Não há usuários."
+    "logout-editor": "Sair do editor"
   },
   "contact": {
     "page-title": "Radio Nudista — Proposta de programa",

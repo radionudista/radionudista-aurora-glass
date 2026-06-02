@@ -14,10 +14,9 @@ const AboutPage: React.FC = () => {
   const editor = useOptionalEditor();
   const lang = useRouteLanguage();
   const credits: AboutCreditsData = editorial?.about.credits ?? defaultAboutCredits;
-  const canEditSite = Boolean(editor?.enabled && editor.canEditEditorial());
 
   const commitCredits = (next: AboutCreditsData) => {
-    if (canEditSite) void editor.commitAboutCredits(next);
+    if (editor?.enabled) void editor.commitAboutCredits(next);
   };
 
   const patchGroupPeople = (groupId: string, people: string[]) => {
@@ -41,7 +40,7 @@ const AboutPage: React.FC = () => {
           
           {/* Hero Title */}
           <header className="mb-12">
-            {canEditSite ? (
+            {editor?.enabled ? (
               <InlineEditableText
                 as="h1"
                 size="lg"
@@ -65,7 +64,7 @@ const AboutPage: React.FC = () => {
 
           {/* Main Copy */}
           <section className="space-y-12">
-            {canEditSite ? (
+            {editor?.enabled ? (
               <div className="text-2xl md:text-3xl font-['Space_Grotesk'] font-light leading-snug tracking-tight text-white">
                 <InlineEditableText
                   multiline
@@ -80,12 +79,12 @@ const AboutPage: React.FC = () => {
                 />
               </div>
             ) : (
-              <p className="whitespace-pre-wrap text-2xl md:text-3xl font-['Space_Grotesk'] font-light leading-snug tracking-tight text-white">
+              <p className="text-2xl md:text-3xl font-['Space_Grotesk'] font-light leading-snug tracking-tight text-white">
                 {resolveEditorialText(editorial?.about.lead, lang)}
               </p>
             )}
             <div className="text-lg space-y-8 text-[#c6c6c6] font-['Inter'] leading-relaxed">
-              {canEditSite ? (
+              {editor?.enabled ? (
                 <>
                   <div>
                     <InlineEditableText
@@ -116,10 +115,10 @@ const AboutPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <p className="whitespace-pre-wrap">
+                  <p>
                     {resolveEditorialText(editorial?.about.paragraph1, lang)}
                   </p>
-                  <p className="whitespace-pre-wrap">
+                  <p>
                     {resolveEditorialText(editorial?.about.paragraph2, lang)}
                   </p>
                 </>
@@ -130,7 +129,7 @@ const AboutPage: React.FC = () => {
           {/* Credits Section with production data */}
           <footer className="mt-24 pt-12 border-t border-[#474747]/20">
             <div className="flex items-end justify-between gap-6 mb-10">
-              {canEditSite ? (
+              {editor?.enabled ? (
                 <>
                   <InlineEditableText
                     as="h2"
@@ -182,7 +181,7 @@ const AboutPage: React.FC = () => {
                     group.id === 'voiceovers' ? 'md:col-span-2' : ''
                   }`}
                 >
-                  {canEditSite ? (
+                  {editor?.enabled ? (
                     <InlineEditableText
                       as="h3"
                       size="sm"
@@ -215,7 +214,7 @@ const AboutPage: React.FC = () => {
                   )}
                   <div className="flex flex-wrap items-center gap-2">
                     {group.people.map((person, idx) =>
-                      canEditSite ? (
+                      editor?.enabled ? (
                         <EditableStringListItem
                           key={`${group.id}-${idx}`}
                           value={person}
@@ -244,7 +243,7 @@ const AboutPage: React.FC = () => {
                         </span>
                       )
                     )}
-                    {canEditSite ? (
+                    {editor?.enabled ? (
                       <button
                         type="button"
                         onClick={() =>
@@ -262,7 +261,7 @@ const AboutPage: React.FC = () => {
             </div>
 
             <section className="mt-10 border border-white/10 bg-black/30 p-6 md:p-7">
-              {canEditSite ? (
+              {editor?.enabled ? (
                 <InlineEditableText
                   as="h3"
                   size="sm"
@@ -291,7 +290,7 @@ const AboutPage: React.FC = () => {
               )}
               <div className="flex flex-wrap items-center gap-2">
                 {credits.collaborators.map((name, idx) =>
-                  canEditSite ? (
+                  editor?.enabled ? (
                     <EditableStringListItem
                       key={`collab-${idx}`}
                       value={name}
@@ -317,7 +316,7 @@ const AboutPage: React.FC = () => {
                     </span>
                   )
                 )}
-                {canEditSite ? (
+                {editor?.enabled ? (
                   <button
                     type="button"
                     onClick={() => patchCollaborators([...credits.collaborators, 'Nuevo nombre'])}
@@ -328,7 +327,7 @@ const AboutPage: React.FC = () => {
                   </button>
                 ) : null}
               </div>
-              {canEditSite ? (
+              {editor?.enabled ? (
                 <div className="mt-5 text-base leading-relaxed text-[#c6c6c6]">
                   <InlineEditableText
                     multiline
@@ -351,7 +350,7 @@ const AboutPage: React.FC = () => {
                   />
                 </div>
               ) : (
-                <p className="mt-5 whitespace-pre-wrap text-base leading-relaxed text-[#c6c6c6]">
+                <p className="mt-5 text-base leading-relaxed text-[#c6c6c6]">
                   {resolveEditorialText(credits.collaboratorsNote, lang)}
                 </p>
               )}
