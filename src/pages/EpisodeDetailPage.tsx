@@ -119,25 +119,22 @@ const EpisodeDetailPage: React.FC = () => {
   }, [contentIndex, contentLang, routeProgramId, editor?.enabled]);
 
   const archiveProgramId = program?.id ?? '';
-  const canEditThisProgram = Boolean(
-    editor?.enabled && program?.id && editor.canEditProgram(program.id)
-  );
 
   const { data: archiveData, isLoading, isError } = useQuery({
     queryKey: ['program-episodes', archiveProgramId, contentLang],
     queryFn: () => episodeService.getEpisodesByProgram(archiveProgramId, contentLang),
-    enabled: Boolean(program?.id) && !canEditThisProgram,
+    enabled: Boolean(program?.id) && !editor?.enabled,
   });
 
   React.useEffect(() => {
-    if (canEditThisProgram && archiveProgramId) {
+    if (editor?.enabled && archiveProgramId) {
       void editor.loadEpisodes(archiveProgramId);
     }
-  }, [archiveProgramId, canEditThisProgram, editor?.loadEpisodes]);
+  }, [archiveProgramId, editor?.enabled, editor?.loadEpisodes]);
 
   const activeArchiveData = React.useMemo(() => {
     if (!archiveProgramId) return archiveData;
-    if (canEditThisProgram && editor.episodesByProgram[archiveProgramId]) {
+    if (editor?.enabled && editor.episodesByProgram[archiveProgramId]) {
       return editor.episodesByProgram[archiveProgramId];
     }
     return archiveData;
@@ -223,7 +220,7 @@ const EpisodeDetailPage: React.FC = () => {
     episode.date,
     isProgramScheduleMeta(program.schedule_meta) ? program.schedule_meta : null
   );
-  if (!released && !canEditThisProgram) {
+  if (!released && !editor?.enabled) {
     return (
       <div className="flex min-h-[calc(100dvh-5rem)] flex-col items-center justify-center bg-black px-6 text-center">
         <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.2em] text-white/40">
@@ -258,7 +255,7 @@ const EpisodeDetailPage: React.FC = () => {
     : program.schedule;
   const episodeTags = (episode.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
   const commitEpisodeCollaborators = (nextCollaborators: string[]) =>
-    canEditThisProgram
+    editor?.enabled
       ? editor.commitEpisodeField(
           program.id,
           episode.id,
@@ -267,7 +264,7 @@ const EpisodeDetailPage: React.FC = () => {
         )
       : Promise.resolve();
   const commitEpisodeTags = (nextTags: string[]) =>
-    canEditThisProgram
+    editor?.enabled
       ? editor.commitEpisodeField(
           program.id,
           episode.id,
@@ -277,7 +274,7 @@ const EpisodeDetailPage: React.FC = () => {
       : Promise.resolve();
 
   const handleUploadEpisodeAudio = async (file: File) => {
-    if (!canEditThisProgram || !program || !episode) return;
+    if (!editor?.enabled || !program || !episode) return;
     const mimeType = file.type || 'audio/mpeg';
     if (!mimeType.startsWith('audio/') && !/\.(wav|flac|mp3|m4a)$/i.test(file.name)) {
       setUploadMessage('Selecciona un archivo de audio válido.');
@@ -328,7 +325,7 @@ const EpisodeDetailPage: React.FC = () => {
               </span>
             </nav>
 
-            {canEditThisProgram ? (
+            {editor?.enabled ? (
               <InlineEditableText
                 as="h1"
                 size="lg"
@@ -344,7 +341,7 @@ const EpisodeDetailPage: React.FC = () => {
             )}
 
             <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-white/50">
-              {canEditThisProgram ? (
+              {editor?.enabled ? (
                 <InlineEditableText
                   as="span"
                   className="!w-auto"
@@ -365,7 +362,7 @@ const EpisodeDetailPage: React.FC = () => {
               <span className="text-white/25">·</span>
               <span>{t('episode-detail.duration')}</span>
               <span className="text-white/25">:</span>
-              {canEditThisProgram ? (
+              {editor?.enabled ? (
                 <InlineEditableText
                   as="span"
                   className="!w-auto"
@@ -377,12 +374,12 @@ const EpisodeDetailPage: React.FC = () => {
               )}
             </div>
 
-            {(canEditThisProgram || episodeTags.length > 0) && (
+            {(editor?.enabled || episodeTags.length > 0) && (
               <div className="mt-6 max-w-2xl">
                 <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/40">
                   Tags
                 </p>
-                {canEditThisProgram ? (
+                {editor?.enabled ? (
                   <div className="mt-2 inline-flex flex-wrap items-center gap-1.5">
                     {episodeTags.map((tag, idx) => (
                       <EditableStringListItem
@@ -458,7 +455,7 @@ const EpisodeDetailPage: React.FC = () => {
               {talentLine && (
                 <p className="mt-1 font-mono text-xs text-white/50 whitespace-nowrap">
                   {t('program-detail.with')}{' '}
-                  {canEditThisProgram ? (
+                  {editor?.enabled ? (
                     <span className="inline-flex flex-wrap items-center gap-1.5 align-middle whitespace-normal">
                       {effectiveCollaborators.map((person, idx) => (
                         <EditableStringListItem
@@ -493,15 +490,15 @@ const EpisodeDetailPage: React.FC = () => {
                   )}
                 </p>
               )}
-              {(canEditThisProgram || episodeDescription) && (
+              {(editor?.enabled || episodeDescription) && (
                 <div className="mt-4 max-w-2xl">
-                  {canEditThisProgram ? (
+                  {editor?.enabled ? (
                     <p className="font-mono text-[10px] text-white/35">
                       {t('episode-detail.description-placeholder')}
                     </p>
                   ) : null}
-                  <div className="mt-2 whitespace-pre-wrap font-['Space_Grotesk'] text-sm leading-relaxed text-white/75 md:text-base">
-                    {canEditThisProgram ? (
+                  <div className="mt-2 font-['Space_Grotesk'] text-sm leading-relaxed text-white/75 md:text-base">
+                    {editor?.enabled ? (
                       <InlineEditableText
                         value={episode.description ?? ''}
                         multiline
@@ -550,7 +547,7 @@ const EpisodeDetailPage: React.FC = () => {
             className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 lg:bg-gradient-to-l"
             aria-hidden
           />
-          {canEditThisProgram && (
+          {editor?.enabled && (
             <div className="absolute bottom-4 right-4 z-20 flex w-[min(100%,24rem)] flex-col gap-2 drop-shadow-lg">
               <EditableImageField
                 label="Portada del episodio"

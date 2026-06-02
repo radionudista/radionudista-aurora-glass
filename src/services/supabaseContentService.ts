@@ -230,20 +230,13 @@ export const fetchEpisodesByProgramFromSupabase = async (
   return active;
 };
 
-export const fetchEditorContentIndexFromSupabase = async (
-  options?: { programId?: string }
-): Promise<ContentIndexData | null> => {
+export const fetchEditorContentIndexFromSupabase = async (): Promise<ContentIndexData | null> => {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  let itemsQuery = supabase.from('content_items').select('*');
-  if (options?.programId) {
-    itemsQuery = itemsQuery.eq('id', options.programId);
-  }
-
   const [{ data: items, error: itemsError }, { data: translations, error: translationsError }] =
     await Promise.all([
-      itemsQuery,
+      supabase.from('content_items').select('*'),
       supabase.from('content_item_translations').select('*'),
     ]);
 
@@ -251,12 +244,7 @@ export const fetchEditorContentIndexFromSupabase = async (
   if (translationsError) throw new Error(translationsError.message);
   if (!items?.length) return null;
 
-  const itemIds = new Set(items.map((item) => item.id));
-  const scopedTranslations = (translations ?? []).filter((row) =>
-    itemIds.has(row.content_item_id)
-  );
-
-  return buildContentIndex(items as ContentItemRow[], scopedTranslations as TranslationRow[]);
+  return buildContentIndex(items as ContentItemRow[], (translations ?? []) as TranslationRow[]);
 };
 
 export const fetchTrashEpisodesByProgramFromSupabase = async (

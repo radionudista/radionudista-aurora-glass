@@ -6,7 +6,6 @@ El sitio usa **Supabase** como única fuente de verdad en runtime. Páginas, pro
 
 - **Sitio público:** `PublicContentProvider` carga `content_items`, traducciones y `site_editorial` al iniciar.
 - **Editor:** login en `/editor-login` con usuario Supabase Auth; guardar/publicar hace upsert en DB (sin redeploy).
-- **Roles:** `admin` (todo el sitio) y `editor` (un solo programa). Perfiles en `editor_profiles`; panel de usuarios en `/admin/usuarios` (solo admin).
 - **Import / disaster recovery:** `npm run seed:supabase` lee JSON de respaldo en `scripts/backup-json/` (no archivos servidos por la app).
 
 ## Tablas principales
@@ -29,14 +28,6 @@ npm run seed:supabase:dry
 ```
 
 Copias de respaldo: `scripts/backup-json/contentIndex.json`, `scripts/backup-json/editor/home-about-contact.json`, `scripts/backup-json/episodes/*.json`.
-
-### Migración obligatoria: roles editor / admin
-
-Ejecutar **una vez** en el SQL Editor de Supabase: [`scripts/supabase-editor-roles-migration.sql`](../../scripts/supabase-editor-roles-migration.sql).
-
-- Crea `editor_profiles` y políticas RLS por programa.
-- Los usuarios ya existentes en Auth pasan a `admin` automáticamente.
-- Crear editores nuevos: `/admin/usuarios` (requiere `SUPABASE_SERVICE_ROLE_KEY` en Functions).
 
 ### Migración obligatoria: `content_kind`
 

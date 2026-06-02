@@ -218,14 +218,6 @@ const Navigation: React.FC<NavigationProps> = ({
               {t('navigation.login')}
             </Link>
           )}
-          {editor?.isAdmin && (
-            <Link
-              to="/admin/usuarios"
-              className="shrink-0 border border-white/30 px-2.5 py-1 text-[10px] uppercase tracking-widest text-white/70 transition hover:border-white hover:text-white"
-            >
-              {t('navigation.admin')}
-            </Link>
-          )}
           {editor?.enabled && (
             <div className="flex shrink-0 items-center gap-3">
               {editor.message ? (
@@ -336,15 +328,6 @@ const Navigation: React.FC<NavigationProps> = ({
                       className="block w-full border border-white/30 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-white/75 transition hover:border-white hover:text-white"
                     >
                       {t('navigation.login')}
-                    </Link>
-                  )}
-                  {editor?.isAdmin && (
-                    <Link
-                      to="/admin/usuarios"
-                      onClick={handleMobileNavClick}
-                      className="block w-full border border-white/30 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-white/75 transition hover:border-white hover:text-white"
-                    >
-                      {t('navigation.admin')}
                     </Link>
                   )}
                   {editor?.enabled && (

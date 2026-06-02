@@ -18,7 +18,6 @@ const ContactPage = () => {
     resolveEditorialText(editorial?.contact.pageTitle, lang) || t('contact.page-title');
   const pageSubtitle =
     resolveEditorialText(editorial?.contact.pageSubtitle, lang) || t('contact.page-subtitle');
-  const canEditSite = Boolean(editor?.enabled && editor.canEditEditorial());
 
   return (
     <section className="relative min-h-full bg-black px-3 pb-16 pt-24 text-white md:px-6">
@@ -26,7 +25,7 @@ const ContactPage = () => {
 
       <div className="relative z-10 mx-auto w-full max-w-2xl">
         <header className="mb-10">
-          {canEditSite ? (
+          {editor?.enabled ? (
             <InlineEditableText
               as="h1"
               size="lg"
@@ -46,7 +45,7 @@ const ContactPage = () => {
               {pageTitle}
             </h1>
           )}
-          {canEditSite ? (
+          {editor?.enabled ? (
             <InlineEditableText
               as="div"
               className="mt-4"

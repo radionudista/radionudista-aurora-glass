@@ -153,10 +153,6 @@ const ProgramDetailPage: React.FC = () => {
   }, [contentIndex, contentLang, programId, editor?.enabled]);
 
   const isEvent = program ? isCalendarEventEntry(program) : false;
-  const canEditThisProgram = Boolean(
-    canEditThisProgram && program?.id && editor.canEditProgram(program.id)
-  );
-  const canManagePrograms = Boolean(editor?.enabled && editor.canManagePrograms());
   const logoSrc = program?.logo ? resolveProgramLogoSrc(program.logo) : null;
 
   useEffect(() => {
@@ -177,7 +173,7 @@ const ProgramDetailPage: React.FC = () => {
 
   const excerpt = useMemo(() => {
     if (!program?.content) return null;
-    const text = program.content.trim();
+    const text = program.content.replace(/\s+/g, ' ').trim();
     if (!text) return null;
     return text.length > 240 ? `${text.slice(0, 237)}…` : text;
   }, [program]);
@@ -246,19 +242,19 @@ const ProgramDetailPage: React.FC = () => {
   const { data: archiveData, isLoading: archiveLoading, isError: archiveError } = useQuery({
     queryKey: ['program-episodes', archiveProgramId, contentLang],
     queryFn: () => episodeService.getEpisodesByProgram(archiveProgramId, contentLang),
-    enabled: Boolean(program?.id) && !canEditThisProgram,
+    enabled: Boolean(program?.id) && !editor?.enabled,
   });
 
   React.useEffect(() => {
-    if (canEditThisProgram && archiveProgramId) {
+    if (editor?.enabled && archiveProgramId) {
       void editor.loadEpisodes(archiveProgramId);
     }
-  }, [archiveProgramId, canEditThisProgram, editor?.loadEpisodes]);
+  }, [archiveProgramId, editor?.enabled, editor?.loadEpisodes]);
 
   const activeArchiveData = React.useMemo(() => {
     if (!archiveProgramId) return archiveData;
     const editorProgramEpisodes = editor?.episodesByProgram[archiveProgramId];
-    if (canEditThisProgram && editorProgramEpisodes) {
+    if (editor?.enabled && editorProgramEpisodes) {
       const hasEditorEpisodes = editorProgramEpisodes.episodes.length > 0;
       const hasArchiveEpisodes = (archiveData?.episodes.length ?? 0) > 0;
       if (hasEditorEpisodes || !hasArchiveEpisodes) {
@@ -275,16 +271,16 @@ const ProgramDetailPage: React.FC = () => {
   const sortedTrashEpisodes = useMemo(
     () =>
       sortEpisodesChronologicallyDesc(
-        canEditThisProgram ? editor.episodesTrashByProgram[archiveProgramId]?.episodes ?? [] : []
+        editor?.enabled ? editor.episodesTrashByProgram[archiveProgramId]?.episodes ?? [] : []
       ),
     [archiveProgramId, editor]
   );
   const visibleEpisodes = useMemo(() => {
-    if (import.meta.env.DEV || canEditThisProgram) return sortedEpisodes;
+    if (import.meta.env.DEV || editor?.enabled) return sortedEpisodes;
     return sortedEpisodes.filter((ep) =>
       isEpisodeReleased(ep.date, scheduleMeta)
     );
-  }, [canEditThisProgram, sortedEpisodes, scheduleMeta]);
+  }, [editor?.enabled, sortedEpisodes, scheduleMeta]);
 
   const dateFormatter = useMemo(
     () =>
@@ -298,7 +294,7 @@ const ProgramDetailPage: React.FC = () => {
 
   if (!program) return <NotFound />;
 
-  const programImageEditor = canEditThisProgram ? (
+  const programImageEditor = editor?.enabled ? (
     <div className="absolute right-2 top-14 z-20 w-[min(100%,19rem)] md:right-4 md:top-20">
       <EditableImageField
         label="Imagen del programa"
@@ -326,7 +322,7 @@ const ProgramDetailPage: React.FC = () => {
   };
 
   const handleDeleteProgram = async () => {
-    if (!canManagePrograms) return;
+    if (!editor?.enabled) return;
     const ok = await editor.deleteProgram({
       id: program.id,
       confirmText: deleteConfirm.trim(),
@@ -339,7 +335,7 @@ const ProgramDetailPage: React.FC = () => {
   };
 
   const handlePurgeEpisode = () => {
-    if (!canEditThisProgram || !episodeToPurge) return;
+    if (!editor?.enabled || !episodeToPurge) return;
     void editor.purgeEpisode(program.id, episodeToPurge.id);
     setPurgeConfirmOpen(false);
     setEpisodeToPurge(null);
@@ -362,7 +358,7 @@ const ProgramDetailPage: React.FC = () => {
   };
 
   const saveScheduleEditor = async () => {
-    if (!canEditThisProgram || !scheduleDraft) return;
+    if (!editor?.enabled || !scheduleDraft) return;
     const legacy = scheduleMetaToLegacyString(scheduleDraft);
     await editor.commitMultipleContentFieldsAllLanguages(program.id, {
       schedule_meta: scheduleDraft,
@@ -372,7 +368,7 @@ const ProgramDetailPage: React.FC = () => {
   };
 
   const handleCreateEpisodeWithAudio = async () => {
-    if (!canEditThisProgram || !newEpisodeFile) return;
+    if (!editor?.enabled || !newEpisodeFile) return;
     if (!newEpisodeTitle.trim()) {
       setCreateEpisodeMessage('El título es obligatorio.');
       return;
@@ -426,7 +422,7 @@ const ProgramDetailPage: React.FC = () => {
   };
 
   const commitTalentList = (nextTalent: string[]) =>
-    canEditThisProgram
+    editor?.enabled
       ? editor.commitContentFieldAllLanguages(
           program.id,
           'talent',
@@ -435,7 +431,7 @@ const ProgramDetailPage: React.FC = () => {
       : Promise.resolve();
 
   const commitSocialList = (nextSocial: string[]) =>
-    canEditThisProgram
+    editor?.enabled
       ? editor.commitContentFieldAllLanguages(
           program.id,
           'social',
@@ -454,7 +450,7 @@ const ProgramDetailPage: React.FC = () => {
           <span className="mx-2 text-[var(--program-accent-mid)]">—</span>
           <span className="inline-flex items-center gap-2 text-white/70">
             <span>{scheduleLocalized}</span>
-            {canEditThisProgram ? (
+            {editor?.enabled ? (
               <button
                 type="button"
                 onClick={openScheduleEditor}
@@ -467,7 +463,7 @@ const ProgramDetailPage: React.FC = () => {
           </span>
         </p>
       )}
-      {canEditThisProgram && showScheduleEditor ? (
+      {editor?.enabled && showScheduleEditor ? (
         <div className="mt-3 grid max-w-xl grid-cols-1 gap-2 border border-white/15 bg-black/40 p-3 md:grid-cols-4">
           <select
             className="border border-white/20 bg-black px-2 py-1 text-xs"
@@ -537,7 +533,7 @@ const ProgramDetailPage: React.FC = () => {
         </div>
       ) : null}
 
-      {canEditThisProgram ? (
+      {editor?.enabled ? (
         <InlineEditableText
           as="h1"
           size="lg"
@@ -563,12 +559,12 @@ const ProgramDetailPage: React.FC = () => {
         </h1>
       )}
 
-      {(talentLine || canEditThisProgram) && (
+      {(talentLine || editor?.enabled) && (
         <p className="mt-4 font-mono text-xs leading-relaxed text-white/55 whitespace-nowrap md:text-sm">
           <span className="text-[var(--program-accent)]">{t('program-detail.with')}</span>
           <span className="text-white/75 whitespace-nowrap">
             {' '}
-            {canEditThisProgram ? (
+            {editor?.enabled ? (
               <span className="inline-flex flex-wrap items-center gap-1.5 align-middle whitespace-normal">
                 {(program.talent ?? []).map((person, idx) => (
                   <EditableStringListItem
@@ -603,9 +599,9 @@ const ProgramDetailPage: React.FC = () => {
         </p>
       )}
 
-      {(socialHandles.length > 0 || canEditThisProgram) && (
+      {(socialHandles.length > 0 || editor?.enabled) && (
         <p className="mt-2 font-mono text-[11px] tracking-[0.08em] text-white/35">
-          {canEditThisProgram ? (
+          {editor?.enabled ? (
             <span className="inline-flex flex-wrap items-center gap-1.5 align-middle">
               {socialHandles.map((handle, idx) => (
                 <EditableStringListItem
@@ -651,11 +647,11 @@ const ProgramDetailPage: React.FC = () => {
         </p>
       )}
 
-      {(canEditThisProgram || excerpt) && (
+      {(editor?.enabled || excerpt) && (
         <div className="mt-8 max-w-2xl border-l-2 border-[var(--program-accent)] pl-5">
           <p className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.32em] text-[var(--program-accent-soft)]">
           </p>
-          {canEditThisProgram ? (
+          {editor?.enabled ? (
             <InlineEditableText
               value={program.content ?? ''}
               multiline
@@ -672,7 +668,7 @@ const ProgramDetailPage: React.FC = () => {
               }
             />
           ) : (
-            <p className="line-clamp-4 whitespace-pre-wrap font-['Space_Grotesk'] text-sm italic leading-relaxed text-white/70 md:text-base">
+            <p className="line-clamp-4 font-['Space_Grotesk'] text-sm italic leading-relaxed text-white/70 md:text-base">
               {excerpt}
             </p>
           )}
@@ -690,7 +686,7 @@ const ProgramDetailPage: React.FC = () => {
         >
           {t('program-detail.back')}
         </Link>
-        {canEditThisProgram ? (
+        {editor?.enabled ? (
           <button
             type="button"
             onClick={() => setDeleteOpen(true)}
@@ -748,7 +744,7 @@ const ProgramDetailPage: React.FC = () => {
           <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-bold uppercase tracking-tight text-white md:text-4xl">
             {t('program-detail.archive-title')}
           </h2>
-          {canEditThisProgram ? (
+          {editor?.enabled ? (
             <div className="mt-4">
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -896,7 +892,7 @@ const ProgramDetailPage: React.FC = () => {
                           ))}
                         </div>
                       )}
-                      {canEditThisProgram ? (
+                      {editor?.enabled ? (
                         <div className="mt-4">
                           <button
                             type="button"

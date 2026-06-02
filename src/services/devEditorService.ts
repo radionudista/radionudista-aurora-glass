@@ -49,22 +49,6 @@ export interface UploadEpisodeAudioToArchiveResponse {
   fileName?: string;
 }
 
-export interface AdminEditorUser {
-  userId: string;
-  email: string;
-  role: 'admin' | 'editor';
-  programId: string | null;
-  disabledAt: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
-
-export interface AdminListUsersResponse {
-  ok: boolean;
-  message: string;
-  users: AdminEditorUser[];
-}
-
 export interface TranslateTextResponse {
   ok: boolean;
   message: string;
@@ -173,41 +157,6 @@ export class DevEditorService {
     }
 
     return parseJson<UploadEpisodeAudioToArchiveResponse>(response);
-  }
-
-  public async listAdminUsers(): Promise<AdminListUsersResponse> {
-    return requestJson('/__dev/editor/admin/list-users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-  }
-
-  public async createAdminUser(payload: {
-    email: string;
-    password: string;
-    role: 'admin' | 'editor';
-    programId?: string | null;
-  }): Promise<{ ok: boolean; message: string }> {
-    return requestJson('/__dev/editor/admin/create-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  }
-
-  public async updateAdminUser(payload: {
-    userId: string;
-    role?: 'admin' | 'editor';
-    programId?: string | null;
-    disabled?: boolean;
-    password?: string;
-  }): Promise<{ ok: boolean; message: string }> {
-    return requestJson('/__dev/editor/admin/update-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
   }
 
   public async translateText(payload: {

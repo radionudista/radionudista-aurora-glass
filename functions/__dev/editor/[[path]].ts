@@ -1,5 +1,4 @@
-import { assertEditorAuthorized } from '../../_shared/editorAuth';
-import { jsonResponse } from '../../_shared/supabaseJwtAuth';
+import { assertSupabaseJwtAuthorized, jsonResponse } from '../../_shared/supabaseJwtAuth';
 import { handleEditorRoute } from '../../_shared/editor/handlers';
 
 interface Env {
@@ -20,11 +19,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
   const subpath = Array.isArray(params.path) ? params.path.join('/') : String(params.path ?? '');
 
-  const subpathForAuth = Array.isArray(params.path) ? params.path.join('/') : String(params.path ?? '');
-  const authResult = await assertEditorAuthorized(request, env, {
-    requireAdmin: subpathForAuth.startsWith('admin/'),
-  });
-  if ('error' in authResult) return authResult.error;
+  const authError = await assertSupabaseJwtAuthorized(request, env);
+  if (authError) return authError;
 
   const isAudioProxy = request.method === 'POST' && subpath === 'upload-episode-audio-proxy';
   let body: unknown = {};
@@ -63,10 +59,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     },
     supabaseEnv: {
       SUPABASE_URL: env.SUPABASE_URL,
-      SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY,
       SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
     },
-    authProfile: authResult.profile,
   });
 
   return jsonResponse(result.status, result.body);
