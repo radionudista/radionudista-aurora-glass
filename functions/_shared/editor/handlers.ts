@@ -8,6 +8,8 @@ import { decodeAudioBase64, decodeAudioBase64Node, buildArchiveUploadPlan, uploa
 import { parseArchiveUploadMetaFromHeaders } from './parseArchiveUploadMeta';
 import { createTranslateUsageStore } from './translateUsage';
 import type { EditorRuntimeConfig } from './types';
+import { canAccessProgram, type EditorAuthProfile } from '../editorAuth';
+import { handleAdminRoute } from './adminHandlers';
 
 export interface EditorHandlerResult {
   status: number;
@@ -32,14 +34,26 @@ export const handleEditorRoute = async (options: {
   runtime: 'local' | 'cloudflare';
   supabaseEnv?: {
     SUPABASE_URL?: string;
+    SUPABASE_ANON_KEY?: string;
     SUPABASE_SERVICE_ROLE_KEY?: string;
   };
+  authProfile?: EditorAuthProfile;
   binaryBody?: ArrayBuffer;
   requestHeaders?: Record<string, string | undefined>;
 }): Promise<EditorHandlerResult> => {
-  const { method, subpath, config, runtime, supabaseEnv } = options;
+  const { method, subpath, config, runtime, supabaseEnv, authProfile } = options;
   const body = (options.body ?? {}) as Record<string, unknown>;
   const usageStore = createTranslateUsageStore(supabaseEnv ?? {});
+
+  if (method === 'POST' && subpath.startsWith('admin/')) {
+    if (!authProfile) return fail('No autenticado.', 401);
+    return handleAdminRoute({
+      subpath,
+      body,
+      profile: authProfile,
+      env: supabaseEnv ?? {},
+    });
+  }
 
   if (method === 'POST' && subpath === 'prepare-archive-audio-upload') {
     const accessKey = config.archive?.accessKey || '';
@@ -57,6 +71,9 @@ export const handleEditorRoute = async (options: {
 
     if (!programId || !episodeId) {
       return fail('Faltan campos requeridos.');
+    }
+    if (authProfile && !canAccessProgram(authProfile, programId)) {
+      return fail('No tenés permiso para subir audio a este programa.', 403);
     }
     if (mimeType !== 'audio/mpeg' && mimeType !== 'audio/mp3') {
       return fail('Solo se permite subir MP3 a Archive.org.');
@@ -110,6 +127,9 @@ export const handleEditorRoute = async (options: {
     if (!meta.programId || !meta.episodeId) {
       return fail('Faltan metadatos del episodio (programId, episodeId).');
     }
+    if (authProfile && !canAccessProgram(authProfile, meta.programId)) {
+      return fail('No tenés permiso para subir audio a este programa.', 403);
+    }
 
     try {
       const uploaded = await uploadEpisodeAudioToArchive({
@@ -146,6 +166,9 @@ export const handleEditorRoute = async (options: {
 
     if (!programId || !episodeId || !body.dataBase64 || !mimeType || !ext) {
       return fail('Faltan campos requeridos o mimeType inválido.');
+    }
+    if (authProfile && !canAccessProgram(authProfile, programId)) {
+      return fail('No tenés permiso para subir audio a este programa.', 403);
     }
 
     try {

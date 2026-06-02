@@ -77,6 +77,14 @@ const ProgramPage: React.FC = () => {
         if (!editor?.enabled && !isArchivosProgramEntry(entry)) {
           return null;
         }
+        if (
+          editor?.enabled &&
+          !editor.isAdmin &&
+          editor.assignedProgramId &&
+          (entry.id || key) !== editor.assignedProgramId
+        ) {
+          return null;
+        }
         return {
           ...entry,
           id: entry.id || key,
@@ -85,7 +93,7 @@ const ProgramPage: React.FC = () => {
         };
       })
       .filter((entry): entry is ShowData => entry !== null);
-  }, [contentIndex, contentLang, editor?.enabled]);
+  }, [contentIndex, contentLang, editor?.enabled, editor?.isAdmin, editor?.assignedProgramId]);
 
   const orderedShows = useMemo(() => {
     return [...allShows].sort((a, b) => {
@@ -173,7 +181,7 @@ const ProgramPage: React.FC = () => {
           <h1 className={`${PAGE_SCREEN_TITLE_CLASS} leading-none text-white`}>
             {t('programs.page-title')}
           </h1>
-          {editor?.enabled ? (
+          {editor?.enabled && editor.canManagePrograms() ? (
             <button
               type="button"
               onClick={() => setCreateOpen(true)}

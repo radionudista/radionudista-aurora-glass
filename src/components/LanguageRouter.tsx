@@ -18,7 +18,9 @@ import SchedulePage from '../pages/SchedulePage';
 import ProgramDetailPage from '../pages/ProgramDetailPage';
 import EpisodeDetailPage from '../pages/EpisodeDetailPage';
 import EditorLoginPage from '../pages/EditorLoginPage';
+import AdminUsersPage from '../pages/AdminUsersPage';
 import ContactPage from '../pages/ContactPage';
+import { EditorProvider } from '../contexts/EditorContext';
 
 /**
  * Language Router Component
@@ -60,7 +62,13 @@ const LanguageDetector: React.FC<{ children: React.ReactNode }> = ({ children })
     if (!isI18nReady) return;
 
     const currentPath = location.pathname;
-    if (currentPath === '/editor-login' || currentPath === '/editor_login') return;
+    if (
+      currentPath === '/editor-login' ||
+      currentPath === '/editor_login' ||
+      currentPath.startsWith('/admin/')
+    ) {
+      return;
+    }
 
     const pathSegments = currentPath.split('/').filter(Boolean);
     const firstSegment = pathSegments[0];
@@ -142,6 +150,14 @@ const AppRoutes: React.FC = () => {
       {/* Editor login (misma ruta en local y prod) */}
       <Route path="/editor-login" element={<EditorLoginPage />} />
       <Route path="/editor_login" element={<Navigate to="/editor-login" replace />} />
+      <Route
+        path="/admin/usuarios"
+        element={
+          <EditorProvider>
+            <AdminUsersPage />
+          </EditorProvider>
+        }
+      />
 
       {/* Catch-all route for 404 */}
       <Route path="*" element={<NotFound />} />

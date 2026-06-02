@@ -153,7 +153,8 @@ const HomePage = () => {
   const hasCustomHomeHero =
     defaultHeroValue !== '' && defaultHeroValue !== DEFAULT_PROGRAM_LOGO;
 
-  const homeHeroEditor = editor?.enabled ? (
+  const canEditSite = Boolean(editor?.enabled && editor.canEditEditorial());
+  const homeHeroEditor = canEditSite ? (
     <div className="absolute left-3 top-14 z-20 w-[min(100%,19rem)] md:left-4 md:top-20">
       <EditableImageField
         label="Imagen del home (sin programa en vivo)"
@@ -339,7 +340,7 @@ const HomePage = () => {
           <div className="absolute inset-0 bg-black/70" aria-hidden />
 
           <div className="relative z-10 mx-auto flex min-h-[42vh] w-full max-w-5xl flex-col items-center justify-center px-6 py-16 text-center">
-            {editor?.enabled ? (
+            {canEditSite ? (
               <InlineEditableText
                 as="p"
                 align="center"
@@ -357,7 +358,7 @@ const HomePage = () => {
                 {manifestKicker}
               </p>
             )}
-            {editor?.enabled ? (
+            {canEditSite ? (
               <InlineEditableText
                 as="h3"
                 size="lg"
@@ -377,7 +378,7 @@ const HomePage = () => {
                 {manifestTitle}
               </h3>
             )}
-            {editor?.enabled ? (
+            {canEditSite ? (
               <InlineEditableText
                 as="div"
                 className="mt-5 max-w-2xl"
