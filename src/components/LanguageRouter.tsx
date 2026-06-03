@@ -19,6 +19,7 @@ import ProgramDetailPage from '../pages/ProgramDetailPage';
 import EpisodeDetailPage from '../pages/EpisodeDetailPage';
 import EditorLoginPage from '../pages/EditorLoginPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
+import EditorProgramActivityPage from '../pages/EditorProgramActivityPage';
 import ContactPage from '../pages/ContactPage';
 import { EditorProvider } from '../contexts/EditorContext';
 
@@ -141,6 +142,7 @@ const AppRoutes: React.FC = () => {
           <Route path="contact" element={<Navigate to="contacto" replace />} />
           <Route path="programacion" element={<ProgramPage />} />
           <Route path="programacion/:programId/:episodeId" element={<EpisodeDetailPage />} />
+          <Route path="programacion/:programId/actividad" element={<EditorProgramActivityPage />} />
           <Route path="programacion/:programId" element={<ProgramDetailPage />} />
           <Route path="schedule" element={<SchedulePage />} />
           {/* Dynamic content pages: /{lang}/{slug} */}
@@ -150,14 +152,9 @@ const AppRoutes: React.FC = () => {
       {/* Editor login (misma ruta en local y prod) */}
       <Route path="/editor-login" element={<EditorLoginPage />} />
       <Route path="/editor_login" element={<Navigate to="/editor-login" replace />} />
-      <Route
-        path="/admin/usuarios"
-        element={
-          <EditorProvider>
-            <AdminUsersPage />
-          </EditorProvider>
-        }
-      />
+      <Route path="/admin/usuarios" element={<PagesLayout />}>
+        <Route index element={<AdminUsersPage />} />
+      </Route>
 
       {/* Catch-all route for 404 */}
       <Route path="*" element={<NotFound />} />
@@ -201,9 +198,11 @@ const RedirectToLang: React.FC = () => {
 const LanguageRouter: React.FC = () => {
   return (
     <BrowserRouter>
-      <LanguageDetector>
-        <AppRoutes />
-      </LanguageDetector>
+      <EditorProvider>
+        <LanguageDetector>
+          <AppRoutes />
+        </LanguageDetector>
+      </EditorProvider>
     </BrowserRouter>
   );
 };

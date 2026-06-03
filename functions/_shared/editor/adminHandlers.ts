@@ -1,5 +1,39 @@
 import type { EditorAuthProfile, SupabaseAuthEnv } from '../editorAuth';
+import { isEditorMasterRole, isEditorStaffRole } from '../editorRoles';
+import { insertAuditFromProfile, listEditorAuditLogs } from './auditLog';
+
+const isMasterProfileRole = (role: string) => String(role || '').trim().toLowerCase() === 'master';
+
+const filterUsersForViewer = (
+  users: Array<{
+    userId: string;
+    email: string;
+    role: string;
+    programId: string | null;
+    disabledAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  }>,
+  viewer: EditorAuthProfile
+) =>
+  users.filter((user) => {
+    if (!isMasterProfileRole(user.role)) return true;
+    return isEditorMasterRole(viewer.role) && user.userId === viewer.userId;
+  });
+
+const filterLogsForViewer = (
+  logs: Awaited<ReturnType<typeof listEditorAuditLogs>>,
+  masterUserIds: Set<string>,
+  viewer: EditorAuthProfile
+) =>
+  logs.filter((log) => {
+    const actorId = log.actorUserId;
+    if (!actorId || !masterUserIds.has(actorId)) return true;
+    return isEditorMasterRole(viewer.role) && actorId === viewer.userId;
+  });
 import type { EditorHandlerResult } from './handlers';
+
+const MASTER_USER_ID = 'fe1e83ed-e2d3-4167-9998-91a5e5bb86f4';
 
 const fail = (message: string, status = 400): EditorHandlerResult => ({
   status,
@@ -45,6 +79,23 @@ const listAuthUsers = async (url: string, serviceKey: string): Promise<Map<strin
   return emailById;
 };
 
+const fetchAuthUserEmail = async (
+  url: string,
+  serviceKey: string,
+  userId: string
+): Promise<string | null> => {
+  try {
+    const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+      headers: adminHeaders(serviceKey),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { email?: string };
+    return payload.email?.trim() || null;
+  } catch {
+    return null;
+  }
+};
+
 export const handleAdminRoute = async (options: {
   subpath: string;
   body: Record<string, unknown>;
@@ -57,11 +108,44 @@ export const handleAdminRoute = async (options: {
     return fail('Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.', 503);
   }
 
-  if (options.profile.role !== 'admin') {
+  if (!isEditorStaffRole(options.profile.role)) {
     return fail('Solo administradores pueden realizar esta acción.', 403);
   }
 
-  const { subpath, body } = options;
+  const { subpath, body, profile, env } = options;
+  const actorEmail = await fetchAuthUserEmail(url, serviceKey, profile.userId);
+
+  if (subpath === 'admin/list-audit-logs') {
+    try {
+      const userId = body.userId == null ? undefined : String(body.userId).trim();
+      const limit = body.limit == null ? undefined : Number(body.limit);
+
+      const profilesRes = await fetch(
+        `${url}/rest/v1/editor_profiles?select=user_id,role&role=eq.master`,
+        { headers: adminHeaders(serviceKey) }
+      );
+      const masterRows = profilesRes.ok
+        ? ((await profilesRes.json()) as Array<{ user_id?: string }>)
+        : [];
+      const masterUserIds = new Set(
+        masterRows.map((row) => String(row.user_id || '')).filter(Boolean)
+      );
+
+      if (userId && masterUserIds.has(userId)) {
+        const canViewActor =
+          isEditorMasterRole(profile.role) && userId === profile.userId;
+        if (!canViewActor) {
+          return ok({ message: 'Actividad cargada.', logs: [] });
+        }
+      }
+
+      let logs = await listEditorAuditLogs(env, { userId: userId || undefined, limit });
+      logs = filterLogsForViewer(logs, masterUserIds, profile);
+      return ok({ message: 'Actividad cargada.', logs });
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : 'Error al cargar actividad.', 502);
+    }
+  }
 
   if (subpath === 'admin/list-users') {
     try {
@@ -78,15 +162,18 @@ export const handleAdminRoute = async (options: {
       }
 
       const profiles = (await profilesRes.json()) as Array<Record<string, unknown>>;
-      const users = (Array.isArray(profiles) ? profiles : []).map((row) => ({
-        userId: String(row.user_id || ''),
-        email: emailById.get(String(row.user_id || '')) ?? '',
-        role: String(row.role || ''),
-        programId: row.program_id == null ? null : String(row.program_id),
-        disabledAt: row.disabled_at == null ? null : String(row.disabled_at),
-        createdAt: row.created_at == null ? null : String(row.created_at),
-        updatedAt: row.updated_at == null ? null : String(row.updated_at),
-      }));
+      const users = filterUsersForViewer(
+        (Array.isArray(profiles) ? profiles : []).map((row) => ({
+          userId: String(row.user_id || ''),
+          email: emailById.get(String(row.user_id || '')) ?? '',
+          role: String(row.role || ''),
+          programId: row.program_id == null ? null : String(row.program_id),
+          disabledAt: row.disabled_at == null ? null : String(row.disabled_at),
+          createdAt: row.created_at == null ? null : String(row.created_at),
+          updatedAt: row.updated_at == null ? null : String(row.updated_at),
+        })),
+        profile
+      );
 
       return ok({ message: 'Usuarios cargados.', users });
     } catch (error) {
@@ -95,6 +182,10 @@ export const handleAdminRoute = async (options: {
   }
 
   if (subpath === 'admin/create-user') {
+    if (!isEditorMasterRole(options.profile.role)) {
+      return fail('Solo el usuario master puede crear cuentas.', 403);
+    }
+
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     const role = String(body.role || '').trim() as 'admin' | 'editor';
@@ -141,6 +232,14 @@ export const handleAdminRoute = async (options: {
         return fail(text || 'Usuario creado pero falló el perfil.', 502);
       }
 
+      await insertAuditFromProfile(env, profile, actorEmail, {
+        action: 'admin.user.create',
+        targetType: 'user',
+        targetId: userId,
+        summary: `Creó usuario ${email} (${role})`,
+        metadata: { email, role, programId: role === 'editor' ? programId : null },
+      });
+
       return ok({
         message: 'Usuario creado.',
         user: { userId, email, role, programId: role === 'editor' ? programId : null },
@@ -162,18 +261,43 @@ export const handleAdminRoute = async (options: {
     const disabled = body.disabled;
 
     if (!userId) return fail('userId es obligatorio.');
+    if (userId === MASTER_USER_ID && (role !== undefined || disabled === true)) {
+      return fail('No se puede modificar la cuenta master.', 403);
+    }
     if (role !== undefined && role !== 'admin' && role !== 'editor') return fail('Rol inválido.');
-    if (role === 'editor' && programId === '') return fail('Asigná un programa al editor.');
+
+    try {
+      const existingRes = await fetch(
+        `${url}/rest/v1/editor_profiles?user_id=eq.${encodeURIComponent(userId)}&select=role&limit=1`,
+        { headers: adminHeaders(serviceKey) }
+      );
+      if (existingRes.ok) {
+        const existingRows = (await existingRes.json()) as Array<{ role?: string }>;
+        const existingRole = existingRows[0]?.role;
+        if (existingRole === 'master' && options.profile.role !== 'master') {
+          return fail('No podés modificar al usuario master.', 403);
+        }
+      }
+    } catch {
+      // continuar si falla la lectura; el PATCH devolverá error si aplica
+    }
     if (role === 'admin' && programId) return fail('Los administradores no llevan programa asignado.');
+    if (role === 'editor' && (programId === undefined || programId === null || programId === '')) {
+      return fail('Asigná un programa al editor.');
+    }
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (role !== undefined) patch.role = role;
-    if (programId !== undefined) patch.program_id = programId;
+    if (role === 'admin') {
+      patch.role = 'admin';
+      patch.program_id = null;
+    } else if (role === 'editor') {
+      patch.role = 'editor';
+      patch.program_id = programId;
+    } else if (programId !== undefined) {
+      patch.program_id = programId;
+    }
     if (disabled === true) patch.disabled_at = new Date().toISOString();
     if (disabled === false) patch.disabled_at = null;
-
-    if (role === 'admin') patch.program_id = null;
-    if (role === 'editor' && programId) patch.program_id = programId;
 
     try {
       const updateRes = await fetch(
@@ -201,6 +325,29 @@ export const handleAdminRoute = async (options: {
           return fail(text || 'Perfil actualizado pero falló cambiar contraseña.', 502);
         }
       }
+
+      const targetEmail = await fetchAuthUserEmail(url, serviceKey, userId);
+      const actionParts: string[] = [];
+      if (role !== undefined) actionParts.push(`rol→${role}`);
+      if (programId !== undefined) actionParts.push(`programa→${programId ?? '—'}`);
+      if (disabled === true) actionParts.push('desactivado');
+      if (disabled === false) actionParts.push('activado');
+      if (typeof body.password === 'string' && body.password.trim().length >= 8) {
+        actionParts.push('contraseña');
+      }
+
+      await insertAuditFromProfile(env, profile, actorEmail, {
+        action: 'admin.user.update',
+        targetType: 'user',
+        targetId: userId,
+        summary: `Actualizó ${targetEmail ?? userId}: ${actionParts.join(', ') || 'perfil'}`,
+        metadata: {
+          role,
+          programId,
+          disabled,
+          passwordChanged: typeof body.password === 'string' && body.password.trim().length >= 8,
+        },
+      });
 
       return ok({ message: 'Usuario actualizado.' });
     } catch (error) {

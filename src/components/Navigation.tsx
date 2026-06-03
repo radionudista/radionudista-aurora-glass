@@ -145,6 +145,77 @@ const Navigation: React.FC<NavigationProps> = ({
   const showEditorLogin =
     isEditorAvailable() && !editor?.enabled && location.pathname !== '/editor-login';
 
+  const editorRoleBadge = useMemo(() => {
+    if (!editor?.enabled || editor.authInitializing || editor.profileLoading) return null;
+
+    if (editor.isAdmin) {
+      return {
+        clickable: true as const,
+        to: '/admin/usuarios',
+        label: editor.isMaster ? t('navigation.master') : t('navigation.admin'),
+        className:
+          'border-white/30 text-white/70 hover:border-white hover:text-white',
+        title: t('navigation.admin-panel-hint'),
+      };
+    }
+
+    if (editor.role !== 'editor') return null;
+
+    const programId = editor.assignedProgramId;
+    if (!programId) return null;
+
+    const localized =
+      contentIndex[programId] ?? editor.contentIndex[programId];
+    const entry = resolveContentIndexEntry<{ title?: string }>(localized, contentLang);
+    const label = entry?.title?.trim() || programId;
+
+    return {
+      clickable: true as const,
+      to: `/${currentLang}/programacion/${programId}/actividad`,
+      label,
+      className:
+        'border-amber-400/45 bg-amber-400/10 text-amber-200/90 hover:border-amber-300 hover:bg-amber-400/15 hover:text-amber-100',
+      title: t('navigation.editor-program-hint', { program: label }),
+    };
+  }, [
+    contentIndex,
+    contentLang,
+    currentLang,
+    editor?.assignedProgramId,
+    editor?.authInitializing,
+    editor?.contentIndex,
+    editor?.enabled,
+    editor?.isAdmin,
+    editor?.isMaster,
+    editor?.profileLoading,
+    editor?.role,
+    t,
+  ]);
+
+  const renderEditorRoleBadge = (extraClassName: string, onNavigate?: () => void) => {
+    if (!editorRoleBadge) return null;
+    const className = `shrink-0 border px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest max-w-[11rem] truncate ${editorRoleBadge.className} ${extraClassName}`;
+
+    if (editorRoleBadge.clickable) {
+      return (
+        <Link
+          to={editorRoleBadge.to}
+          onClick={onNavigate}
+          title={editorRoleBadge.title}
+          className={`transition ${className}`}
+        >
+          {editorRoleBadge.label}
+        </Link>
+      );
+    }
+
+    return (
+      <span title={editorRoleBadge.title} className={className} aria-disabled="true">
+        {editorRoleBadge.label}
+      </span>
+    );
+  };
+
   const openMobileMenu = () => {
     setIsMobileMenuOpen(true);
   };
@@ -218,24 +289,9 @@ const Navigation: React.FC<NavigationProps> = ({
               {t('navigation.login')}
             </Link>
           )}
-          {editor?.isAdmin && (
-            <Link
-              to="/admin/usuarios"
-              className="shrink-0 border border-white/30 px-2.5 py-1 text-[10px] uppercase tracking-widest text-white/70 transition hover:border-white hover:text-white"
-            >
-              {t('navigation.admin')}
-            </Link>
-          )}
+          {renderEditorRoleBadge('')}
           {editor?.enabled && (
             <div className="flex shrink-0 items-center gap-3">
-              {editor.message ? (
-                <p
-                  className="hidden max-w-[14rem] truncate text-[10px] leading-snug text-lime-300/80 xl:block"
-                  title={editor.message}
-                >
-                  {editor.message}
-                </p>
-              ) : null}
               <button
                 type="button"
                 onClick={() => { void editor.logout(); }}
@@ -338,14 +394,9 @@ const Navigation: React.FC<NavigationProps> = ({
                       {t('navigation.login')}
                     </Link>
                   )}
-                  {editor?.isAdmin && (
-                    <Link
-                      to="/admin/usuarios"
-                      onClick={handleMobileNavClick}
-                      className="block w-full border border-white/30 bg-white/[0.02] px-4 py-4 text-center font-['Space_Grotesk'] text-[15px] uppercase tracking-[0.14em] text-white/75 transition hover:border-white hover:text-white"
-                    >
-                      {t('navigation.admin')}
-                    </Link>
+                  {renderEditorRoleBadge(
+                    'block w-full max-w-none px-4 py-4 text-center font-[\'Space_Grotesk\'] text-[15px] tracking-[0.14em]',
+                    handleMobileNavClick
                   )}
                   {editor?.enabled && (
                     <button

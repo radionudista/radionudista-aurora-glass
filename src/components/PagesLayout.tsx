@@ -2,7 +2,6 @@ import React, { useEffect, useLayoutEffect } from 'react';
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import Layout from './Layout';
 import { AudioProvider } from '../contexts/AudioContext';
-import { EditorProvider } from '../contexts/EditorContext';
 import { ArchivePlayerProvider } from '../contexts/ArchivePlayerContext';
 
 function scrollDocumentToTop() {
@@ -27,19 +26,17 @@ const PagesLayout = () => {
   }, [location.pathname, navigationType]);
 
   return (
-    <EditorProvider>
-      <AudioProvider>
-        <ArchivePlayerProvider>
-          <div className="min-h-screen w-full relative bg-black">
-            <div className="relative z-10 min-h-screen flex flex-col">
-              <Layout>
-                <Outlet />
-              </Layout>
-            </div>
+    <AudioProvider>
+      <ArchivePlayerProvider>
+        <div className="min-h-screen w-full relative bg-black">
+          <div className="relative z-10 min-h-screen flex flex-col">
+            <Layout>
+              <Outlet />
+            </Layout>
           </div>
-        </ArchivePlayerProvider>
-      </AudioProvider>
-    </EditorProvider>
+        </div>
+      </ArchivePlayerProvider>
+    </AudioProvider>
   );
 };
 

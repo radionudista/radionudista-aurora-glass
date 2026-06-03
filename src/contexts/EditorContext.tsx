@@ -34,19 +34,28 @@ import {
   canManagePrograms as profileCanManagePrograms,
   fetchEditorProfile,
   type EditorProfile,
-  type EditorRole,
 } from '../services/editorProfileService';
+import {
+  isEditorMasterRole,
+  isEditorStaffRole,
+  type EditorRole,
+} from '../lib/editorRoles';
 import { useOptionalPublicContent } from './PublicContentContext';
 import { mapRouteToContentIndexLanguage } from '../utils/contentLanguage';
 import { queryClient } from '../lib/queryClient';
+import { recordEditorAction } from '../services/editorAuditService';
 
 type LocalizedTextValues = Record<EditorLanguage, string>;
 
 interface EditorContextValue {
   enabled: boolean;
   authenticated: boolean;
+  /** True until the first Supabase session read finishes (avoids false login redirects). */
+  authInitializing: boolean;
+  profileLoading: boolean;
   role: EditorRole | null;
   isAdmin: boolean;
+  isMaster: boolean;
   assignedProgramId: string | null;
   canEditProgram: (programId: string) => boolean;
   canEditEditorial: () => boolean;
@@ -198,7 +207,9 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
   const editorAvailable = isEditorAvailable();
   const [authenticated, setAuthenticated] = React.useState(false);
+  const [authInitializing, setAuthInitializing] = React.useState(editorAvailable);
   const [profile, setProfile] = React.useState<EditorProfile | null>(null);
+  const [profileLoading, setProfileLoading] = React.useState(false);
   const active = editorAvailable && authenticated && Boolean(profile) && !profile?.disabledAt;
 
   const canEditProgram = React.useCallback(
@@ -248,17 +259,34 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   >({});
 
   React.useEffect(() => {
-    void getSupabaseSession().then((session) => setAuthenticated(Boolean(session)));
-    return subscribeAuth((session) => setAuthenticated(Boolean(session)));
-  }, []);
-
-  React.useEffect(() => {
-    if (!authenticated) {
-      setProfile(null);
+    if (!editorAvailable) {
+      setAuthInitializing(false);
+      setAuthenticated(false);
       return;
     }
 
     let cancelled = false;
+    void getSupabaseSession().then((session) => {
+      if (cancelled) return;
+      setAuthenticated(Boolean(session));
+      setAuthInitializing(false);
+    });
+
+    return subscribeAuth((session) => {
+      setAuthenticated(Boolean(session));
+      setAuthInitializing(false);
+    });
+  }, [editorAvailable]);
+
+  React.useEffect(() => {
+    if (!authenticated) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setProfileLoading(true);
     void (async () => {
       try {
         const nextProfile = await fetchEditorProfile();
@@ -288,15 +316,19 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return;
         }
         setProfile(nextProfile);
+        setMessage(null);
       } catch (error) {
         if (cancelled) return;
         setProfile(null);
         setMessage(error instanceof Error ? error.message : 'Error al cargar perfil de editor.');
+      } finally {
+        if (!cancelled) setProfileLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
+      setProfileLoading(false);
     };
   }, [authenticated]);
 
@@ -318,11 +350,12 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 
   const logout = React.useCallback(async () => {
+    recordEditorAction({ action: 'auth.logout', summary: 'Cerró sesión de editor' });
     const client = getSupabaseClient();
     if (client) await client.auth.signOut();
     setAuthenticated(false);
     setProfile(null);
-    setMessage('Modo editor desactivado.');
+    setMessage(null);
   }, []);
 
   React.useEffect(() => {
@@ -343,7 +376,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setContentIndex(content);
           setBaseContentIndex(clone(content));
         }
-        if (profile.role === 'admin') {
+        if (isEditorStaffRole(profile.role)) {
           const editorialData = await fetchEditorialFromSupabase();
           if (editorialData) {
             setEditorial(editorialData);
@@ -413,6 +446,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseContentIndex(clone(nextContent));
     setMessage(response.message);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.content.update',
+      targetType: 'program',
+      targetId: programId,
+      summary: `Actualizó ${field} (${lang})`,
+      metadata: { programId, lang, field },
+    });
   };
 
   const commitContentFieldLocalized = async (
@@ -433,6 +473,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseContentIndex(clone(nextContent));
     setMessage(response.message);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.content.update',
+      targetType: 'program',
+      targetId: programId,
+      summary: `Actualizó ${field} (todos los idiomas)`,
+      metadata: { programId, field },
+    });
   };
 
   const commitContentFieldAllLanguages = async (programId: string, field: string, value: unknown) => {
@@ -449,6 +496,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseContentIndex(clone(nextContent));
     setMessage(response.message);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.content.update',
+      targetType: 'program',
+      targetId: programId,
+      summary: `Actualizó ${field}`,
+      metadata: { programId, field },
+    });
   };
 
   /** Tras subir logo: Storage + logo_url ya están en DB; sincroniza estado local y contenido público. */
@@ -482,6 +536,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     setMessage(uploadMessage);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.media.program_logo',
+      targetType: 'program',
+      targetId: programId,
+      summary: `Subió logo de ${programId}`,
+      metadata: { url },
+    });
   };
 
   /** Tras subir portada: episodes.cover_image_url ya está en DB. */
@@ -515,6 +576,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     await loadEpisodes(programId);
     setMessage(uploadMessage);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.media.episode_cover',
+      targetType: 'episode',
+      targetId: `${programId}/${episodeId}`,
+      summary: `Subió portada ${episodeId}`,
+      metadata: { programId, episodeId, url },
+    });
   };
 
   const commitMultipleContentFieldsAllLanguages = async (
@@ -536,6 +604,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseContentIndex(clone(nextContent));
     setMessage(response.message);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.content.update',
+      targetType: 'program',
+      targetId: programId,
+      summary: `Actualizó varios campos`,
+      metadata: { programId, fields: Object.keys(fields) },
+    });
   };
 
   const updateEditorialField = (
@@ -624,6 +699,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEpisodesByProgram((prev) => ({ ...prev, [programId]: clone(nextProgram) }));
     setMessage(response.message);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.episode.update',
+      targetType: 'episode',
+      targetId: `${programId}/${episodeId}`,
+      summary: `Actualizó ${field} en ${episodeId}`,
+      metadata: { programId, episodeId, field },
+    });
   };
 
   const addEpisode = async (
@@ -667,6 +749,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEpisodesByProgram((prev) => ({ ...prev, [programId]: clone(nextProgram) }));
     setMessage(response.message);
     await refreshPublicContent(programId);
+    recordEditorAction({
+      action: 'editor.episode.create',
+      targetType: 'episode',
+      targetId: `${programId}/${newEpisodeId}`,
+      summary: `Creó episodio ${newEpisodeId}`,
+      metadata: { programId, episodeId: newEpisodeId },
+    });
     return newEpisodeId;
   };
 
@@ -708,6 +797,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setBaseEpisodesTrashByProgram((prev) => ({ ...prev, [programId]: clone(nextTrash) }));
       setMessage('Episodio movido a la papelera.');
       await refreshPublicContent(programId);
+      recordEditorAction({
+        action: 'editor.episode.trash',
+        targetType: 'episode',
+        targetId: `${programId}/${episodeId}`,
+        summary: `Movió a papelera ${episodeId}`,
+        metadata: { programId, episodeId },
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo mover a la papelera.');
       episodesLoaded.current.delete(programId);
@@ -745,6 +841,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setBaseEpisodesByProgram((prev) => ({ ...prev, [programId]: clone(nextActive) }));
       setMessage('Episodio restaurado.');
       await refreshPublicContent(programId);
+      recordEditorAction({
+        action: 'editor.episode.restore',
+        targetType: 'episode',
+        targetId: `${programId}/${episodeId}`,
+        summary: `Restauró ${episodeId}`,
+        metadata: { programId, episodeId },
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo restaurar el episodio.');
       episodesLoaded.current.delete(programId);
@@ -771,6 +874,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
       setMessage('Episodio eliminado permanentemente.');
       await refreshPublicContent(programId);
+      recordEditorAction({
+        action: 'editor.episode.purge',
+        targetType: 'episode',
+        targetId: `${programId}/${episodeId}`,
+        summary: `Eliminó permanentemente ${episodeId}`,
+        metadata: { programId, episodeId },
+      });
     }
   };
 
@@ -851,6 +961,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setBaseEpisodesTrashByProgram(clone(episodesTrashByProgram));
       setMessage(response.message);
       await refreshPublicContent();
+      recordEditorAction({ action: 'editor.publish', summary: 'Publicó cambios pendientes' });
     } finally {
       setSaving(false);
     }
@@ -873,6 +984,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEditorial(clone(nextEditorial));
     setMessage(response.message);
     await refreshPublicContent();
+    recordEditorAction({
+      action: 'editor.editorial.update',
+      targetType: 'editorial',
+      targetId: `${String(section)}.${field}`,
+      summary: `Editorial ${String(section)}.${field} (${lang})`,
+      metadata: { section, field, lang },
+    });
   };
 
   const commitEditorialFieldLocalized = async (
@@ -895,6 +1013,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEditorial(clone(nextEditorial));
     setMessage(response.message);
     await refreshPublicContent();
+    recordEditorAction({
+      action: 'editor.editorial.update',
+      targetType: 'editorial',
+      targetId: `${String(section)}.${field}`,
+      summary: `Editorial ${String(section)}.${field}`,
+      metadata: { section, field },
+    });
   };
 
   const translateText: EditorContextValue['translateText'] = async (text) => {
@@ -911,6 +1036,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEditorial(clone(nextEditorial));
     setMessage(response.message);
     await refreshPublicContent();
+    recordEditorAction({ action: 'editor.about.update', summary: 'Actualizó créditos About' });
   };
 
   const commitHomeDefaultHeroImage = async (url: string) => {
@@ -922,6 +1048,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEditorial(clone(nextEditorial));
     setMessage(response.message);
     await refreshPublicContent();
+    recordEditorAction({ action: 'editor.home.hero', summary: 'Actualizó imagen hero home', metadata: { url } });
   };
 
   const applyUploadedHomeHero = async (url: string, uploadMessage: string) => {
@@ -933,6 +1060,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setBaseEditorial(clone(nextEditorial));
     setMessage(response.message || uploadMessage);
     await refreshPublicContent();
+    recordEditorAction({ action: 'editor.home.hero_upload', summary: 'Subió hero home', metadata: { url } });
   };
 
   const createProgram = async (payload: CreateProgramPayload): Promise<string | null> => {
@@ -952,6 +1080,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       episodesLoaded.current.add(programId);
       setMessage(res.message);
       await refreshPublicContent(programId);
+      recordEditorAction({
+        action: 'editor.program.create',
+        targetType: 'program',
+        targetId: programId,
+        summary: `Creó programa ${programId}`,
+        metadata: { programId },
+      });
       return programId;
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'No se pudo crear el programa.');
@@ -994,6 +1129,13 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       episodesLoaded.current.delete(payload.id);
       setMessage(res.message);
       await refreshPublicContent(payload.id);
+      recordEditorAction({
+        action: 'editor.program.delete',
+        targetType: 'program',
+        targetId: payload.id,
+        summary: `Eliminó programa ${payload.id}`,
+        metadata: { programId: payload.id },
+      });
       return true;
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'No se pudo eliminar el programa.');
@@ -1012,8 +1154,11 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value: EditorContextValue = {
     enabled: active,
     authenticated,
+    authInitializing,
+    profileLoading,
     role: profile?.role ?? null,
-    isAdmin: profile?.role === 'admin',
+    isAdmin: isEditorStaffRole(profile?.role),
+    isMaster: isEditorMasterRole(profile?.role),
     assignedProgramId: profile?.programId ?? null,
     canEditProgram,
     canEditEditorial,
