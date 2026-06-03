@@ -10,6 +10,7 @@ import { createTranslateUsageStore } from './translateUsage';
 import type { EditorRuntimeConfig } from './types';
 import { canAccessProgram, type EditorAuthProfile } from '../editorAuth';
 import { handleAdminRoute } from './adminHandlers';
+import { insertAuditFromProfile, listEditorAuditLogsForProgram } from './auditLog';
 
 export interface EditorHandlerResult {
   status: number;
@@ -45,6 +46,19 @@ export const handleEditorRoute = async (options: {
   const body = (options.body ?? {}) as Record<string, unknown>;
   const usageStore = createTranslateUsageStore(supabaseEnv ?? {});
 
+  if (method === 'POST' && subpath === 'editor/list-program-audit-logs') {
+    if (!authProfile) return fail('No autenticado.', 401);
+    if (authProfile.role !== 'editor') return fail('Solo editores de programa pueden ver esta actividad.', 403);
+    const programId = (authProfile.programId || '').trim();
+    if (!programId) return fail('Sin programa asignado.', 403);
+    try {
+      const logs = await listEditorAuditLogsForProgram(supabaseEnv ?? {}, programId, { limit: 500 });
+      return ok({ message: 'Actividad del programa cargada.', logs });
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : 'Error al cargar actividad.', 502);
+    }
+  }
+
   if (method === 'POST' && subpath.startsWith('admin/')) {
     if (!authProfile) return fail('No autenticado.', 401);
     return handleAdminRoute({
@@ -53,6 +67,28 @@ export const handleEditorRoute = async (options: {
       profile: authProfile,
       env: supabaseEnv ?? {},
     });
+  }
+
+  if (method === 'POST' && subpath === 'audit/record') {
+    if (!authProfile) return fail('No autenticado.', 401);
+    const action = String(body.action || '').trim();
+    if (!action) return fail('action es obligatorio.');
+    const actorEmail = body.actorEmail == null ? null : String(body.actorEmail).trim();
+    const claimedUserId = String(body.actorUserId || '').trim();
+    if (claimedUserId && claimedUserId !== authProfile.userId) {
+      return fail('No podés registrar acciones de otro usuario.', 403);
+    }
+    await insertAuditFromProfile(supabaseEnv ?? {}, authProfile, actorEmail || undefined, {
+      action,
+      targetType: body.targetType == null ? null : String(body.targetType),
+      targetId: body.targetId == null ? null : String(body.targetId),
+      summary: body.summary == null ? null : String(body.summary),
+      metadata:
+        body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
+          ? (body.metadata as Record<string, unknown>)
+          : {},
+    });
+    return ok({ message: 'Actividad registrada.' });
   }
 
   if (method === 'POST' && subpath === 'prepare-archive-audio-upload') {
@@ -92,6 +128,16 @@ export const handleEditorRoute = async (options: {
         mimeType: 'audio/mpeg',
         fileName: String(body.fileName || `${episodeId}.mp3`),
       });
+
+      if (authProfile) {
+        await insertAuditFromProfile(supabaseEnv ?? {}, authProfile, undefined, {
+          action: 'editor.audio.prepare_upload',
+          targetType: 'episode',
+          targetId: `${programId}/${episodeId}`,
+          summary: `Preparó subida de audio (${programId}/${episodeId})`,
+          metadata: { programId, episodeId, date },
+        });
+      }
 
       return ok({
         message: 'Permiso de subida a Archive.org generado.',
@@ -253,6 +299,15 @@ export const handleEditorRoute = async (options: {
       });
       const nextUsedChars = usedChars + requestedChars;
       await usageStore.writeTranslateUsage(month, nextUsedChars, monthlyLimit);
+      if (authProfile) {
+        await insertAuditFromProfile(supabaseEnv ?? {}, authProfile, undefined, {
+          action: 'editor.translate',
+          targetType: 'translation',
+          targetId: month,
+          summary: `Traducción (${targets.join(', ')})`,
+          metadata: { source, targets, chars: requestedChars },
+        });
+      }
       return ok({
         message: 'Texto traducido.',
         month,

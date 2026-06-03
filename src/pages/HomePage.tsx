@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQueries } from '@tanstack/react-query';
 import { useLiveProgram } from '../hooks/useLiveProgram';
@@ -17,6 +17,10 @@ import {
   DEFAULT_PROGRAM_LOGO,
   resolveProgramLogoSrc,
 } from '../utils/programLogo';
+import {
+  buildProgramNavigationState,
+  currentLocationFrom,
+} from '../utils/programNavigationState';
 
 const HOME_MANIFEST_VIDEO_STORAGE_KEY = 'rn.home.manifest.video.queue';
 const HOME_MANIFEST_VIDEO_LOAD_MARK_KEY = 'rn.home.manifest.video.load-mark';
@@ -34,6 +38,15 @@ const HomePage = () => {
   const editor = useOptionalEditor();
   const archivePlayer = useArchivePlayer();
   const lang = useRouteLanguage();
+  const location = useLocation();
+  const programNavState = React.useMemo(
+    () =>
+      buildProgramNavigationState(
+        currentLocationFrom(location),
+        t('navigation.home')
+      ),
+    [location.pathname, location.search, t]
+  );
   const { program, heroImageUrl, isLive, isLoading, isError, pastPrograms } = useLiveProgram();
   const [manifestVideo, setManifestVideo] = React.useState<string>(VIDEO_CONFIG.defaultVideo);
   const failedVideosRef = React.useRef<Set<string>>(new Set());
@@ -207,6 +220,7 @@ const HomePage = () => {
         {program && isLive && programLink && (
           <Link
             to={programLink}
+            state={programNavState}
             className="absolute inset-0 z-[5] block outline-none ring-offset-2 ring-offset-black focus-visible:ring-2 focus-visible:ring-white/40"
             aria-label={program.title}
           />
@@ -261,11 +275,8 @@ const HomePage = () => {
                   ? matchedEpisode.coverImage
                   : resolveProgramLogoSrc(past.logoFile);
 
-                return (
-                  <article
-                    key={past.event.id}
-                    className="group overflow-hidden border border-white/15 bg-black transition-colors hover:border-white/35"
-                  >
+                const cardBody = (
+                  <>
                     <div className="relative h-52 w-full overflow-hidden md:h-56">
                       <div
                         className="h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-[1.03]"
@@ -276,8 +287,12 @@ const HomePage = () => {
                       {matchedEpisode && (
                         <button
                           type="button"
-                          onClick={() => handlePlayEpisode(past, matchedEpisode)}
-                          className="absolute bottom-3 left-3 inline-flex h-9 items-center gap-2 border border-white/35 bg-black/65 px-3 font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-black/85 disabled:opacity-60"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handlePlayEpisode(past, matchedEpisode);
+                          }}
+                          className="absolute bottom-3 left-3 z-10 inline-flex h-9 items-center gap-2 border border-white/35 bg-black/65 px-3 font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-black/85 disabled:opacity-60"
                           aria-label={`${t('home.play-latest-episode')} - ${past.title}`}
                         >
                           <span className="inline-block h-0 w-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-white" />
@@ -291,18 +306,9 @@ const HomePage = () => {
                         {dateFormatter.format(past.event.startTime)} •{' '}
                         {timeFormatter.format(past.event.startTime)}
                       </p>
-                      {linkPath ? (
-                        <Link
-                          to={linkPath}
-                          className="mt-2 block font-['Space_Grotesk'] text-xl font-bold uppercase leading-tight tracking-tight text-white transition-colors hover:text-[#d9d9d9]"
-                        >
-                          {past.title}
-                        </Link>
-                      ) : (
-                        <h3 className="mt-2 font-['Space_Grotesk'] text-xl font-bold uppercase leading-tight tracking-tight text-white">
-                          {past.title}
-                        </h3>
-                      )}
+                      <h3 className="mt-2 font-['Space_Grotesk'] text-xl font-bold uppercase leading-tight tracking-tight text-white transition-colors group-hover:text-[#d9d9d9]">
+                        {past.title}
+                      </h3>
                       {episodeTags.length > 0 && (
                         <div className="mt-4 flex flex-wrap gap-1.5">
                           {episodeTags.map((tag) => (
@@ -316,7 +322,30 @@ const HomePage = () => {
                         </div>
                       )}
                     </div>
-                  </article>
+                  </>
+                );
+
+                if (!linkPath) {
+                  return (
+                    <article
+                      key={past.event.id}
+                      className="overflow-hidden border border-white/15 bg-black"
+                    >
+                      {cardBody}
+                    </article>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={past.event.id}
+                    to={linkPath}
+                    state={programNavState}
+                    className="group block overflow-hidden border border-white/15 bg-black transition-colors hover:border-white/35 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50"
+                    aria-label={past.title}
+                  >
+                    {cardBody}
+                  </Link>
                 );
               })}
             </div>

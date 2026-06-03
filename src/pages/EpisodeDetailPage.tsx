@@ -1,6 +1,10 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import {
+  preserveProgramNavigationState,
+  readProgramNavigationFrom,
+} from '../utils/programNavigationState';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import { env } from '../config/env';
@@ -90,12 +94,6 @@ const EpisodeDetailPage: React.FC = () => {
         if (!candidate || candidate.component !== 'ProgramPage') continue;
         if (candidate.public !== true && candidate.public !== 'true') continue;
         if (
-          (candidate as { content_kind?: string }).content_kind === 'event' &&
-          !editor?.enabled
-        ) {
-          continue;
-        }
-        if (
           normalize(candidate.id) !== target
           && normalize(candidate.slug) !== target
           && normalize(key) !== target
@@ -116,7 +114,7 @@ const EpisodeDetailPage: React.FC = () => {
     }
 
     return null;
-  }, [contentIndex, contentLang, routeProgramId, editor?.enabled]);
+  }, [contentIndex, contentLang, routeProgramId]);
 
   const archiveProgramId = program?.id ?? '';
   const canEditThisProgram = Boolean(
@@ -193,6 +191,11 @@ const EpisodeDetailPage: React.FC = () => {
 
   const programDetailPath = program ? `/${currentLang}/programacion/${encodeURIComponent(program.id)}` : null;
   const programacionPath = `/${currentLang}/programacion`;
+  const archiveBackTo = useMemo(
+    () => readProgramNavigationFrom(location, programacionPath),
+    [location, programacionPath]
+  );
+  const preservedNavState = useMemo(() => preserveProgramNavigationState(location), [location]);
 
   const playThisEpisode = (ep: Episode) => {
     archivePlayer.openEpisode({
@@ -309,13 +312,17 @@ const EpisodeDetailPage: React.FC = () => {
         <div className="flex flex-1 flex-col justify-between border-white/10 px-5 py-8 md:px-10 md:py-12 lg:max-w-[52%] lg:border-r lg:py-14 xl:px-14">
           <div>
             <nav className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/45">
-              <Link to={programacionPath} className="transition-colors hover:text-[var(--program-accent)]">
+              <Link to={archiveBackTo} className="transition-colors hover:text-[var(--program-accent)]">
                 {t('episode-detail.breadcrumb-root')}
               </Link>
               <span className="mx-2 text-white/25">/</span>
               {programDetailPath && (
                 <>
-                  <Link to={programDetailPath} className="transition-colors hover:text-[var(--program-accent)]">
+                  <Link
+                    to={programDetailPath}
+                    state={preservedNavState}
+                    className="transition-colors hover:text-[var(--program-accent)]"
+                  >
                     {program.title}
                   </Link>
                   <span className="mx-2 text-white/25">/</span>

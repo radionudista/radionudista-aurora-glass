@@ -157,6 +157,35 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   }
+
+  /* Scrollbar fino para paneles oscuros (admin, listas internas) */
+  .scrollbar-minimal {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.26);
+  }
+
+  .scrollbar-minimal::-webkit-scrollbar-corner {
+    background: transparent;
+  }
   
   .nav-link {
     color: rgba(255, 255, 255, 0.8);

@@ -8,6 +8,10 @@ import { useOptionalEditor } from '../contexts/EditorContext';
 import { useContentIndexData } from '../hooks/useEditorContent';
 import { mapRouteToContentIndexLanguage, resolveContentIndexEntry, resolveContentIndexString } from '../utils/contentLanguage';
 import { useRouteLanguage } from '../hooks/useRouteLanguage';
+import {
+  buildProgramNavigationState,
+  currentLocationFrom,
+} from '../utils/programNavigationState';
 import { resolveProgramLogoSrc } from '../utils/programLogo';
 import { episodeService } from '../services/episodeService';
 import { isEpisodeReleased, isProgramScheduleMeta, type ProgramScheduleMeta } from '../utils/programSchedule';
@@ -24,7 +28,7 @@ import {
   PAGE_SHELL_BELOW_NAV,
   PAGE_SHELL_CONTENT,
 } from '../constants/layoutConstants';
-import { getContentKind, isArchivosProgramEntry } from '../editor/programUtils';
+import { getContentKind, isArchivosProgramEntry, isCalendarEventEntry } from '../editor/programUtils';
 import type { ContentKind } from '../editor/contracts';
 
 interface ShowData {
@@ -66,6 +70,14 @@ const ProgramPage: React.FC = () => {
 
   const routeLang = useRouteLanguage();
   const contentLang = mapRouteToContentIndexLanguage(routeLang);
+  const programNavState = useMemo(
+    () =>
+      buildProgramNavigationState(
+        currentLocationFrom(location),
+        t('programs.page-title')
+      ),
+    [location.pathname, location.search, t]
+  );
 
   const allShows = useMemo(() => {
     return Object.entries(contentIndex)
@@ -74,7 +86,8 @@ const ProgramPage: React.FC = () => {
         if (!entry || entry.component !== 'ProgramPage' || (entry.public !== true && entry.public !== 'true')) {
           return null;
         }
-        if (!editor?.enabled && !isArchivosProgramEntry(entry)) {
+        const staffCanSeeEvents = Boolean(editor?.enabled && editor.isAdmin);
+        if (!isArchivosProgramEntry(entry) && !(staffCanSeeEvents && isCalendarEventEntry(entry))) {
           return null;
         }
         if (
@@ -170,7 +183,9 @@ const ProgramPage: React.FC = () => {
       setNewTitlePt('');
       setNewSchedule('');
       setNewContentKind('program');
-      void navigate(`/${routeLang}/programacion/${encodeURIComponent(createdId)}`);
+      void navigate(`/${routeLang}/programacion/${encodeURIComponent(createdId)}`, {
+        state: programNavState,
+      });
     }
   };
 
@@ -225,6 +240,7 @@ const ProgramPage: React.FC = () => {
             <article key={show.id} className="group">
               <Link
                 to={`/${routeLang}/programacion/${show.id}`}
+                state={programNavState}
                 className="block overflow-hidden border border-white/20 bg-black"
               >
                 <div className="aspect-[4/3] overflow-hidden bg-[#0a0a0a]">
@@ -239,6 +255,7 @@ const ProgramPage: React.FC = () => {
               <div className="pt-3">
                 <Link
                   to={`/${routeLang}/programacion/${show.id}`}
+                  state={programNavState}
                   className="block font-['Space_Grotesk'] text-2xl font-bold uppercase leading-[0.95] tracking-tighter text-white transition hover:underline xl:text-[1.65rem] xl:leading-tight"
                 >
                   {show.title}

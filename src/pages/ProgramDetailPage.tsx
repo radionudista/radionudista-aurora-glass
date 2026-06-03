@@ -1,6 +1,11 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import {
+  preserveProgramNavigationState,
+  readProgramNavigationBack,
+  type ProgramNavOriginLabels,
+} from '../utils/programNavigationState';
 import { useTranslation } from 'react-i18next';
 import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { env } from '../config/env';
@@ -117,6 +122,24 @@ const ProgramDetailPage: React.FC = () => {
   const currentLang = getCurrentLang(location.pathname, env.SUPPORTED_LANGUAGES);
   const routeLang = useRouteLanguage();
   const contentLang = mapRouteToContentIndexLanguage(currentLang);
+  const archivePath = `/${currentLang}/programacion`;
+  const navOriginLabels = useMemo<ProgramNavOriginLabels>(
+    () => ({
+      home: t('navigation.home'),
+      archive: t('programs.page-title'),
+      about: t('navigation.about'),
+      contact: t('navigation.contact'),
+      schedule: t('navigation.schedule'),
+      adminUsers: t('admin-users.title'),
+      fallback: t('programs.page-title'),
+    }),
+    [t]
+  );
+  const backNav = useMemo(
+    () => readProgramNavigationBack(location, archivePath, navOriginLabels),
+    [archivePath, location, navOriginLabels]
+  );
+  const preservedNavState = useMemo(() => preserveProgramNavigationState(location), [location]);
 
   const program = useMemo(() => {
     if (!programId) return null;
@@ -128,7 +151,6 @@ const ProgramDetailPage: React.FC = () => {
         const candidate = localized[probeLang] as ProgramMetadata | undefined;
         if (!candidate || candidate.component !== 'ProgramPage') continue;
         if (candidate.public !== true && candidate.public !== 'true') continue;
-        if (isCalendarEventEntry(candidate) && !editor?.enabled) continue;
         if (
           normalize(candidate.id) !== target
           && normalize(candidate.slug) !== target
@@ -150,7 +172,7 @@ const ProgramDetailPage: React.FC = () => {
     }
 
     return null;
-  }, [contentIndex, contentLang, programId, editor?.enabled]);
+  }, [contentIndex, contentLang, programId]);
 
   const isEvent = program ? isCalendarEventEntry(program) : false;
   const canEditThisProgram = Boolean(
@@ -417,7 +439,10 @@ const ProgramDetailPage: React.FC = () => {
       setNewEpisodeDescription('');
       setNewEpisodeTags('');
       setNewEpisodeFile(null);
-      void navigate(`/${currentLang}/programacion/${encodeURIComponent(program.id)}/${encodeURIComponent(createdEpisodeId)}`);
+      void navigate(
+        `/${currentLang}/programacion/${encodeURIComponent(program.id)}/${encodeURIComponent(createdEpisodeId)}`,
+        { state: preservedNavState }
+      );
     } catch (error) {
       setCreateEpisodeMessage(error instanceof Error ? error.message : 'Error al crear episodio.');
     } finally {
@@ -685,10 +710,11 @@ const ProgramDetailPage: React.FC = () => {
     <div className="bg-black text-white" style={accentVars}>
       <div className={heroShellClass}>
         <Link
-          to={`/${currentLang}/programacion`}
-          className="absolute left-2 top-2 z-30 inline-flex border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors bg-black/70 text-[var(--program-accent-fg)] border-[color:color-mix(in_srgb,var(--program-accent)_35%,transparent)] hover:bg-[var(--program-accent)] hover:text-black hover:border-[var(--program-accent)]"
+          to={backNav.to}
+          className="absolute left-2 top-2 z-30 inline-flex max-w-[min(100%,14rem)] truncate border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors bg-black/70 text-[var(--program-accent-fg)] border-[color:color-mix(in_srgb,var(--program-accent)_35%,transparent)] hover:bg-[var(--program-accent)] hover:text-black hover:border-[var(--program-accent)]"
+          title={t('program-detail.back-to', { origin: backNav.originLabel })}
         >
-          {t('program-detail.back')}
+          {t('program-detail.back-to', { origin: backNav.originLabel })}
         </Link>
         {canEditThisProgram ? (
           <button
@@ -841,74 +867,74 @@ const ProgramDetailPage: React.FC = () => {
                     key={ep.id}
                     className="group overflow-hidden border border-white/15 bg-black transition-colors hover:border-[color:color-mix(in_srgb,var(--program-accent)_45%,white)]"
                   >
-                    <div className="relative h-52 w-full overflow-hidden md:h-56">
-                      <Link
-                        to={episodePath}
-                        className="absolute inset-0 z-0 block"
-                        aria-label={`${t('episode-detail.open-page')}: ${ep.title}`}
-                      />
-                      <div
-                        className="pointer-events-none h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-[1.03]"
-                        style={{ backgroundImage: `url(${cardCover})` }}
-                        aria-hidden
-                      />
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-black/20" />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          playEpisode(ep);
-                        }}
-                        className="absolute bottom-3 left-3 z-10 inline-flex h-9 items-center gap-2 border border-white/35 bg-black/65 px-3 font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-black/85"
-                        aria-label={`${t('program-detail.play-episode')}: ${ep.title}`}
-                      >
-                        <span className="inline-block h-0 w-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-white" />
-                        {t('program-detail.play-episode')}
-                      </button>
-                    </div>
+                    <Link
+                      to={episodePath}
+                      state={preservedNavState}
+                      className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/50"
+                      aria-label={`${t('episode-detail.open-page')}: ${ep.title}`}
+                    >
+                      <div className="relative h-52 w-full overflow-hidden md:h-56">
+                        <div
+                          className="pointer-events-none h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-500 group-hover:scale-[1.03]"
+                          style={{ backgroundImage: `url(${cardCover})` }}
+                          aria-hidden
+                        />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-black/20" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            playEpisode(ep);
+                          }}
+                          className="absolute bottom-3 left-3 z-10 inline-flex h-9 items-center gap-2 border border-white/35 bg-black/65 px-3 font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-black/85"
+                          aria-label={`${t('program-detail.play-episode')}: ${ep.title}`}
+                        >
+                          <span className="inline-block h-0 w-0 border-y-[5px] border-y-transparent border-l-[7px] border-l-white" />
+                          {t('program-detail.play-episode')}
+                        </button>
+                      </div>
 
-                    <div className="px-4 py-4">
-                      <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.18em] text-white/45">
-                        {dateFormatter.format(new Date(`${ep.date}T12:00:00`))}
-                        <span className="mx-2 text-white/25">·</span>
-                        {ep.duration}
-                      </p>
-                      <Link
-                        to={episodePath}
-                        className="mt-2 block font-['Space_Grotesk'] text-xl font-bold uppercase leading-tight tracking-tight text-white transition-colors hover:text-[var(--program-accent-fg)]"
-                      >
-                        {ep.title}
-                      </Link>
-                      {ep.description && (
-                        <p className="mt-2 line-clamp-2 font-['Space_Grotesk'] text-xs leading-relaxed text-white/55">
-                          {ep.description}
+                      <div className="px-4 py-4">
+                        <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.18em] text-white/45">
+                          {dateFormatter.format(new Date(`${ep.date}T12:00:00`))}
+                          <span className="mx-2 text-white/25">·</span>
+                          {ep.duration}
                         </p>
-                      )}
-                      {ep.tags && ep.tags.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-1.5">
-                          {ep.tags.slice(0, 4).map((tag) => (
-                            <span
-                              key={`${ep.id}-${tag}`}
-                              className="border border-white/20 px-2 py-1 font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.14em] text-white/75"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {canEditThisProgram ? (
-                        <div className="mt-4">
-                          <button
-                            type="button"
-                            onClick={() => editor.removeEpisode(program.id, ep.id)}
-                            className="inline-flex items-center gap-1.5 border border-red-500/60 bg-red-500/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-red-200 transition hover:bg-red-500/20"
-                          >
-                            <Trash2 size={12} />
-                            {t('program-detail.archive-delete')}
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
+                        <h3 className="mt-2 font-['Space_Grotesk'] text-xl font-bold uppercase leading-tight tracking-tight text-white transition-colors group-hover:text-[var(--program-accent-fg)]">
+                          {ep.title}
+                        </h3>
+                        {ep.description && (
+                          <p className="mt-2 line-clamp-2 font-['Space_Grotesk'] text-xs leading-relaxed text-white/55">
+                            {ep.description}
+                          </p>
+                        )}
+                        {ep.tags && ep.tags.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-1.5">
+                            {ep.tags.slice(0, 4).map((tag) => (
+                              <span
+                                key={`${ep.id}-${tag}`}
+                                className="border border-white/20 px-2 py-1 font-['Space_Grotesk'] text-[10px] uppercase tracking-[0.14em] text-white/75"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                    {canEditThisProgram ? (
+                      <div className="border-t border-white/10 px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => editor.removeEpisode(program.id, ep.id)}
+                          className="inline-flex items-center gap-1.5 border border-red-500/60 bg-red-500/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-red-200 transition hover:bg-red-500/20"
+                        >
+                          <Trash2 size={12} />
+                          {t('program-detail.archive-delete')}
+                        </button>
+                      </div>
+                    ) : null}
                   </article>
                   );
                 })}

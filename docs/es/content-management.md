@@ -6,7 +6,7 @@ El sitio usa **Supabase** como única fuente de verdad en runtime. Páginas, pro
 
 - **Sitio público:** `PublicContentProvider` carga `content_items`, traducciones y `site_editorial` al iniciar.
 - **Editor:** login en `/editor-login` con usuario Supabase Auth; guardar/publicar hace upsert en DB (sin redeploy).
-- **Roles:** `admin` (todo el sitio) y `editor` (un solo programa). Perfiles en `editor_profiles`; panel de usuarios en `/admin/usuarios` (solo admin).
+- **Roles:** `master` (como admin + único que crea usuarios), `admin` (todo el sitio) y `editor` (un solo programa). Perfiles en `editor_profiles`; panel en `/admin/usuarios` (admin y master; crear cuentas solo master). El editor ve un timeline de su programa en `/{lang}/programacion/{programId}/actividad` (enlace desde el badge del navbar); incluye acciones de admin/master sobre ese programa.
 - **Import / disaster recovery:** `npm run seed:supabase` lee JSON de respaldo en `scripts/backup-json/` (no archivos servidos por la app).
 
 ## Tablas principales
@@ -37,6 +37,12 @@ Ejecutar **una vez** en el SQL Editor de Supabase: [`scripts/supabase-editor-rol
 - Crea `editor_profiles` y políticas RLS por programa.
 - Los usuarios ya existentes en Auth pasan a `admin` automáticamente.
 - Crear editores nuevos: `/admin/usuarios` (requiere `SUPABASE_SERVICE_ROLE_KEY` en Functions).
+
+Si el panel admin devuelve `42501 permission denied` (`editor_profiles` o `content_items` con `service_role`), ejecutá el parche: [`scripts/supabase-editor-profiles-grants.sql`](../../scripts/supabase-editor-profiles-grants.sql).
+
+Rol **master** (parche): [`scripts/supabase-editor-master-role.sql`](../../scripts/supabase-editor-master-role.sql).
+
+Logs de actividad (auditoría): [`scripts/supabase-editor-audit-logs.sql`](../../scripts/supabase-editor-audit-logs.sql). Admin/master filtran por usuario en `/admin/usuarios` → Actividad; editores listan solo logs de su `program_id` vía `POST editor/list-program-audit-logs` (sin ocultar acciones del master sobre su programa).
 
 ### Migración obligatoria: `content_kind`
 

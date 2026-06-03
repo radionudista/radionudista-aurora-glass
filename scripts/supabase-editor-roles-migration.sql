@@ -1,8 +1,8 @@
--- Editor roles: admin (global) vs editor (single program)
+-- Editor roles: master | admin (global) | editor (un programa)
 -- Ejecutar en Supabase Dashboard → SQL Editor (después de storage setup si aplica).
 --
--- Bootstrap: todos los usuarios auth existentes pasan a role = admin.
--- Nuevos editores: asignar program_id desde /admin/usuarios o INSERT manual.
+-- Bootstrap: usuarios Auth existentes → admin; UID master fijo → master (único que crea cuentas).
+-- Parche en proyectos ya migrados: scripts/supabase-editor-master-role.sql
 
 -- ---------------------------------------------------------------------------
 -- 1. Tabla editor_profiles
@@ -10,13 +10,13 @@
 
 CREATE TABLE IF NOT EXISTS public.editor_profiles (
   user_id uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
-  role text NOT NULL CHECK (role IN ('admin', 'editor')),
+  role text NOT NULL CHECK (role IN ('admin', 'editor', 'master')),
   program_id text NULL REFERENCES public.content_items (id) ON DELETE SET NULL,
   disabled_at timestamptz NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT editor_profiles_admin_no_program CHECK (
-    (role = 'admin' AND program_id IS NULL)
+  CONSTRAINT editor_profiles_role_program CHECK (
+    (role IN ('admin', 'master') AND program_id IS NULL)
     OR (role = 'editor' AND program_id IS NOT NULL)
   )
 );
@@ -82,7 +82,17 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT COALESCE(public.current_editor_role() = 'admin', false);
+  SELECT COALESCE(public.current_editor_role() IN ('admin', 'master'), false);
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_editor_master()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(public.current_editor_role() = 'master', false);
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_editor_active()
@@ -150,6 +160,10 @@ INSERT INTO public.editor_profiles (user_id, role, program_id)
 SELECT id, 'admin', NULL FROM auth.users
 ON CONFLICT (user_id) DO NOTHING;
 
+UPDATE public.editor_profiles
+SET role = 'master', program_id = NULL
+WHERE user_id = 'fe1e83ed-e2d3-4167-9998-91a5e5bb86f4';
+
 -- ---------------------------------------------------------------------------
 -- 4. RLS editor_profiles
 -- ---------------------------------------------------------------------------
@@ -162,20 +176,37 @@ FOR SELECT TO authenticated
 USING (user_id = auth.uid() OR public.is_editor_admin());
 
 DROP POLICY IF EXISTS editor_profiles_admin_insert ON public.editor_profiles;
-CREATE POLICY editor_profiles_admin_insert ON public.editor_profiles
+DROP POLICY IF EXISTS editor_profiles_master_insert ON public.editor_profiles;
+CREATE POLICY editor_profiles_master_insert ON public.editor_profiles
 FOR INSERT TO authenticated
-WITH CHECK (public.is_editor_admin());
+WITH CHECK (public.is_editor_master());
 
 DROP POLICY IF EXISTS editor_profiles_admin_update ON public.editor_profiles;
-CREATE POLICY editor_profiles_admin_update ON public.editor_profiles
+DROP POLICY IF EXISTS editor_profiles_master_update ON public.editor_profiles;
+CREATE POLICY editor_profiles_master_update ON public.editor_profiles
 FOR UPDATE TO authenticated
-USING (public.is_editor_admin())
-WITH CHECK (public.is_editor_admin());
+USING (public.is_editor_master())
+WITH CHECK (public.is_editor_master());
 
 DROP POLICY IF EXISTS editor_profiles_admin_delete ON public.editor_profiles;
-CREATE POLICY editor_profiles_admin_delete ON public.editor_profiles
+DROP POLICY IF EXISTS editor_profiles_master_delete ON public.editor_profiles;
+CREATE POLICY editor_profiles_master_delete ON public.editor_profiles
 FOR DELETE TO authenticated
-USING (public.is_editor_admin());
+USING (public.is_editor_master());
+
+-- PostgREST (anon/authenticated/service_role) necesita GRANT explícito en tablas creadas por SQL.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.editor_profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.editor_profiles TO service_role;
+GRANT SELECT ON public.content_items TO service_role;
+
+GRANT EXECUTE ON FUNCTION public.current_editor_role() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.current_editor_program_id() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_editor_admin() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_editor_master() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_editor_active() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.can_edit_program(text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.can_edit_storage_object(text, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.editor_storage_program_prefix(text) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- 5. RLS escritura en tablas de contenido (no toca lectura pública existente)

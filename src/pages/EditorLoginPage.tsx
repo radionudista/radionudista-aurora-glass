@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { env } from '../config/env';
 import { getSupabaseClient, isEditorAvailable } from '../lib/supabaseClient';
 import { fetchEditorProfile } from '../services/editorProfileService';
+import { recordEditorAction } from '../services/editorAuditService';
 import { FormContainer, FormField, FormInput, FormButton } from '../components/ui/FormComponents';
 import { FALLBACK_LOGO } from '../hooks/useLiveProgram';
 
@@ -10,6 +11,11 @@ const HOME_HERO_LOGO = FALLBACK_LOGO;
 
 const EditorLoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo =
+    typeof (location.state as { from?: string } | null)?.from === 'string'
+      ? (location.state as { from: string }).from
+      : null;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -57,6 +63,15 @@ const EditorLoginPage: React.FC = () => {
       if (profile.disabledAt) {
         await supabase.auth.signOut();
         setError('Tu cuenta de editor está desactivada.');
+        return;
+      }
+      recordEditorAction({
+        action: 'auth.login',
+        summary: `Inicio de sesión (${email.trim()})`,
+        metadata: { role: profile.role },
+      });
+      if (returnTo?.startsWith('/')) {
+        navigate(returnTo, { replace: true });
         return;
       }
       if (profile.role === 'editor' && profile.programId) {

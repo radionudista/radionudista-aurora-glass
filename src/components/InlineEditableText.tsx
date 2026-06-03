@@ -209,12 +209,24 @@ const InlineEditableText: React.FC<InlineEditableTextProps> = ({
 
   const viewRowClass = cn(
     'w-full max-w-full',
-    isLarge ? 'flex flex-wrap items-start gap-3' : 'inline-flex max-w-full items-center gap-2 align-middle',
+    isLarge
+      ? 'flex flex-wrap items-start gap-3'
+      : multiline
+        ? 'flex items-start gap-2'
+        : 'inline-flex max-w-full items-center gap-2 align-middle',
     align === 'center' && 'justify-center'
   );
 
   const textSpan = (
-    <span className={cn('min-w-0 flex-1 break-words', textClassName)}>{displayValue ?? value}</span>
+    <span
+      className={cn(
+        'min-w-0 flex-1 break-words',
+        multiline && 'whitespace-pre-wrap',
+        textClassName
+      )}
+    >
+      {displayValue ?? value}
+    </span>
   );
 
   const editBtn = (

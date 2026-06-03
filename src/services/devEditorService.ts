@@ -52,11 +52,23 @@ export interface UploadEpisodeAudioToArchiveResponse {
 export interface AdminEditorUser {
   userId: string;
   email: string;
-  role: 'admin' | 'editor';
+  role: 'admin' | 'editor' | 'master';
   programId: string | null;
   disabledAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+export interface EditorAuditLogRow {
+  id: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  summary: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 export interface AdminListUsersResponse {
@@ -186,10 +198,53 @@ export class DevEditorService {
   public async createAdminUser(payload: {
     email: string;
     password: string;
-    role: 'admin' | 'editor';
+    role: 'admin' | 'editor' | 'master';
     programId?: string | null;
   }): Promise<{ ok: boolean; message: string }> {
     return requestJson('/__dev/editor/admin/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public async listAdminAuditLogs(payload?: {
+    userId?: string;
+    limit?: number;
+  }): Promise<{
+    ok: boolean;
+    message: string;
+    logs: EditorAuditLogRow[];
+  }> {
+    return requestJson('/__dev/editor/admin/list-audit-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload ?? {}),
+    });
+  }
+
+  public async listProgramAuditLogs(): Promise<{
+    ok: boolean;
+    message: string;
+    logs: EditorAuditLogRow[];
+  }> {
+    return requestJson('/__dev/editor/editor/list-program-audit-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+  }
+
+  public async recordAudit(payload: {
+    actorUserId: string;
+    actorEmail?: string | null;
+    action: string;
+    targetType?: string | null;
+    targetId?: string | null;
+    summary?: string | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<{ ok: boolean; message: string }> {
+    return requestJson('/__dev/editor/audit/record', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

@@ -1,6 +1,7 @@
 import { jsonResponse, readBearerToken } from './supabaseJwtAuth';
+import { isEditorMasterRole, isEditorStaffRole, type EditorRole } from './editorRoles';
 
-export type EditorRole = 'admin' | 'editor';
+export type { EditorRole };
 
 export interface EditorAuthProfile {
   userId: string;
@@ -17,7 +18,7 @@ export interface SupabaseAuthEnv {
 
 const parseProfileRow = (row: Record<string, unknown>): EditorAuthProfile | null => {
   const role = String(row.role || '');
-  if (role !== 'admin' && role !== 'editor') return null;
+  if (role !== 'admin' && role !== 'editor' && role !== 'master') return null;
   return {
     userId: String(row.user_id || ''),
     role,
@@ -44,14 +45,18 @@ export const fetchAuthUserId = async (
 
 export const fetchEditorProfile = async (
   token: string,
-  env: Pick<SupabaseAuthEnv, 'SUPABASE_URL' | 'SUPABASE_ANON_KEY'>
+  env: Pick<SupabaseAuthEnv, 'SUPABASE_URL' | 'SUPABASE_ANON_KEY'>,
+  userId?: string
 ): Promise<EditorAuthProfile | null> => {
   const url = (env.SUPABASE_URL || '').trim();
   const anonKey = (env.SUPABASE_ANON_KEY || '').trim();
   if (!url || !anonKey || !token) return null;
 
+  const resolvedUserId = userId ?? (await fetchAuthUserId(token, env));
+  if (!resolvedUserId) return null;
+
   const response = await fetch(
-    `${url}/rest/v1/editor_profiles?select=user_id,role,program_id,disabled_at&limit=1`,
+    `${url}/rest/v1/editor_profiles?select=user_id,role,program_id,disabled_at&user_id=eq.${encodeURIComponent(resolvedUserId)}&limit=1`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -69,6 +74,7 @@ export const fetchEditorProfile = async (
 
 export interface AssertEditorAuthOptions {
   requireAdmin?: boolean;
+  requireMaster?: boolean;
   programId?: string;
 }
 
@@ -109,7 +115,7 @@ export const assertEditorAuthorized = async (
     };
   }
 
-  const profile = await fetchEditorProfile(token, env);
+  const profile = await fetchEditorProfile(token, env, userId);
   if (!profile || profile.userId !== userId) {
     return {
       error: jsonResponse(403, {
@@ -137,7 +143,16 @@ export const assertEditorAuthorized = async (
     };
   }
 
-  if (options.requireAdmin && profile.role !== 'admin') {
+  if (options.requireMaster && !isEditorMasterRole(profile.role)) {
+    return {
+      error: jsonResponse(403, {
+        ok: false,
+        message: 'Solo el usuario master puede realizar esta acción.',
+      }),
+    };
+  }
+
+  if (options.requireAdmin && !isEditorStaffRole(profile.role)) {
     return {
       error: jsonResponse(403, {
         ok: false,
@@ -148,7 +163,7 @@ export const assertEditorAuthorized = async (
 
   if (options.programId) {
     const allowed =
-      profile.role === 'admin' ||
+      isEditorStaffRole(profile.role) ||
       (profile.role === 'editor' && profile.programId === options.programId);
     if (!allowed) {
       return {
@@ -164,4 +179,4 @@ export const assertEditorAuthorized = async (
 };
 
 export const canAccessProgram = (profile: EditorAuthProfile, programId: string): boolean =>
-  profile.role === 'admin' || profile.programId === programId;
+  isEditorStaffRole(profile.role) || profile.programId === programId;
