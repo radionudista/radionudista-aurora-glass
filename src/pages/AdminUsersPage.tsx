@@ -409,7 +409,9 @@ const AdminUsersPage: React.FC = () => {
               : 'grid gap-5'
           }
         >
-          <section className={`flex min-h-0 flex-col ${panelShell}`}>
+          <section
+            className={`flex min-h-0 flex-col lg:min-h-[calc(100vh-12rem)] ${panelShell}`}
+          >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5">
               <h2 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-white/55">
                 <Users className="h-4 w-4 text-white/50" aria-hidden />
@@ -419,7 +421,7 @@ const AdminUsersPage: React.FC = () => {
                 {users.length}
               </span>
             </div>
-            <div className="scrollbar-minimal flex max-h-[calc(100vh-12rem)] flex-col gap-2 overflow-y-auto p-3 pr-2">
+            <div className="scrollbar-minimal flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3 pr-2">
               {loading ? (
                 <p className="py-8 text-center text-sm text-white/45">{t('common.loading')}</p>
               ) : null}
@@ -444,20 +446,20 @@ const AdminUsersPage: React.FC = () => {
                 return (
                   <article
                     key={user.userId}
-                    className={`relative shrink-0 overflow-hidden border transition-colors duration-200 ${
+                    className={`relative shrink-0 overflow-hidden border bg-white/[0.07] transition-colors duration-200 ${
                       isSelected
-                        ? 'border-lime-400/40'
+                        ? 'border-lime-400/40 bg-white/[0.1]'
                         : isMasterAccount
                           ? 'border-lime-400/25 hover:border-lime-400/40'
-                          : 'border-white/10 hover:border-white/20'
+                          : 'border-white/15 hover:border-white/25'
                     }`}
                   >
                     <div
                       className={`pointer-events-none absolute inset-0 bg-center bg-no-repeat transition-opacity duration-200 ${
                         staffCard
-                          ? 'bg-[length:min(78%,12rem)] opacity-[0.22] brightness-0 invert'
-                          : 'bg-cover opacity-[0.22]'
-                      } ${isSelected ? (staffCard ? 'opacity-[0.3]' : 'opacity-[0.28]') : ''} ${
+                          ? 'bg-[length:min(78%,12rem)] opacity-[0.28] brightness-0 invert'
+                          : 'bg-cover opacity-[0.28]'
+                      } ${isSelected ? (staffCard ? 'opacity-[0.34]' : 'opacity-[0.32]') : ''} ${
                         user.disabledAt ? 'grayscale' : ''
                       }`}
                       style={{ backgroundImage: `url(${backdropSrc})` }}
@@ -466,8 +468,8 @@ const AdminUsersPage: React.FC = () => {
                     <div
                       className={`pointer-events-none absolute inset-0 ${
                         staffCard
-                          ? 'bg-[linear-gradient(to_bottom,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0.72)_55%,rgba(0,0,0,0.88)_100%)]'
-                          : 'bg-[linear-gradient(to_bottom,rgba(0,0,0,0.65)_0%,rgba(0,0,0,0.82)_50%,rgba(0,0,0,0.92)_100%)]'
+                          ? 'bg-[linear-gradient(to_bottom,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.42)_55%,rgba(0,0,0,0.58)_100%)]'
+                          : 'bg-[linear-gradient(to_bottom,rgba(0,0,0,0.32)_0%,rgba(0,0,0,0.48)_50%,rgba(0,0,0,0.62)_100%)]'
                       }`}
                       aria-hidden
                     />

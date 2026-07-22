@@ -4,6 +4,13 @@ import { STREAM_CONFIG } from '../constants/streamConstants';
 import { RadioStreamService } from '../services/streamService';
 import { AudioService, AudioValidationResult } from '../services/audioService';
 import { toast } from '../hooks/use-toast';
+import {
+  bindMediaSessionActionHandlers,
+  clearMediaSession,
+  parseNowPlayingTrack,
+  setMediaSessionPlaybackState,
+  updateMediaSessionMetadata,
+} from '../utils/mediaSession';
 
 interface AudioContextType {
   isPlaying: boolean;
@@ -106,6 +113,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioInstancesRef = useRef<Set<HTMLAudioElement>>(new Set());
   const currentTrackRef = useRef(currentTrack);
   currentTrackRef.current = currentTrack;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const currentSourceRef = useRef(currentSource);
+  currentSourceRef.current = currentSource;
+  const mediaSessionHandlersRef = useRef<{ play: () => void; pause: () => void }>({
+    play: () => undefined,
+    pause: () => undefined,
+  });
   const streamService = useRef(
     new RadioStreamService(
       STREAM_CONFIG.statusUrl,
@@ -737,9 +752,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   /**
    * Track Information - Following SRP
+   * Keep polling while audio is playing even if the tab is backgrounded,
+   * so iOS lock-screen metadata can update.
    */
   const fetchCurrentTrack = useCallback(async () => {
-    if (document.hidden) return;
+    if (document.hidden && !isPlayingRef.current) return;
     try {
       const trackName = await streamService.current.fetchCurrentTrack();
       if (trackName !== currentTrackRef.current) {
@@ -752,7 +769,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Polling del now-playing: solo con la pestaña visible
+  // Polling del now-playing: visible siempre; en background solo si está reproduciendo
   useEffect(() => {
     void fetchCurrentTrack();
 
@@ -761,7 +778,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, MEDIA_CONSTANTS.STREAM.UPDATE_INTERVAL);
 
     const onVisibilityChange = () => {
-      if (!document.hidden) void fetchCurrentTrack();
+      if (!document.hidden || isPlayingRef.current) void fetchCurrentTrack();
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
 
@@ -771,12 +788,86 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [fetchCurrentTrack]);
 
+  // Keep Media Session handlers pointing at the latest play/pause logic
+  mediaSessionHandlersRef.current = {
+    play: () => {
+      if (currentSourceRef.current === 'program' && programAudioRef.current) {
+        void AudioService.safePlay(programAudioRef.current).then((result) => {
+          if (result.success) {
+            setIsPlaying(true);
+            setError(null);
+          }
+        });
+        return;
+      }
+      if (!isPlayingRef.current) {
+        togglePlayWithPause();
+      }
+    },
+    pause: () => {
+      if (currentSourceRef.current === 'program' && programAudioRef.current) {
+        programAudioRef.current.pause();
+        setIsPlaying(false);
+        return;
+      }
+      if (isPlayingRef.current && currentSourceRef.current === 'radio' && audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      }
+    },
+  };
+
+  useEffect(() => {
+    return bindMediaSessionActionHandlers({
+      play: () => mediaSessionHandlersRef.current.play(),
+      pause: () => mediaSessionHandlersRef.current.pause(),
+    });
+  }, []);
+
+  // Push now-playing metadata to iOS Control Center / lock screen
+  useEffect(() => {
+    const hasActiveAudio =
+      (currentSource === 'radio' && Boolean(audioRef.current)) ||
+      (currentSource === 'program' && Boolean(programAudioRef.current));
+
+    if (!isPlaying && !hasActiveAudio) {
+      clearMediaSession();
+      return;
+    }
+
+    if (currentSource === 'program') {
+      updateMediaSessionMetadata({
+        title: currentProgramTitle || 'Programa',
+        artist: 'Radionudista',
+        album: 'Radionudista',
+        artworkUrl: coverImageUrl,
+      });
+    } else {
+      const { title, artist } = parseNowPlayingTrack(currentTrack);
+      updateMediaSessionMetadata({
+        title,
+        artist,
+        album: 'Radionudista',
+        artworkUrl: coverImageUrl,
+      });
+    }
+
+    setMediaSessionPlaybackState(isPlaying ? 'playing' : 'paused');
+  }, [
+    isPlaying,
+    currentSource,
+    currentTrack,
+    coverImageUrl,
+    currentProgramTitle,
+  ]);
+
   // Cleanup effect - ensures all audio instances are properly disposed on unmount
   useEffect(() => {
     return () => {
       if (import.meta.env.DEV) {
         console.log('AudioProvider unmounting - cleaning up all audio instances');
       }
+      clearMediaSession();
       cleanupAllAudioInstances();
     };
   }, [cleanupAllAudioInstances]);
